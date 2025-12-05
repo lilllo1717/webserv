@@ -1,22 +1,28 @@
-CXX				= c++
-RM				= rm -f
-CFLAGS			= -Wall -Wextra -Werror
+CXX             = c++
+RM              = rm -f
+CFLAGS          = -Wall -Wextra -Werror
+INCLUDES        = -I include
 
-SRCS			=	main.cpp
-					
-OBJS			= $(SRCS:.cpp=.o)
-NAME			= webserv
-all:	$(NAME)
+SRCS            = src/main.cpp \
+                  src/server/server.cpp
+
+OBJS            = $(SRCS:.cpp=.o)
+NAME            = webserv
+
+all: $(NAME)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CFLAGS) $(OBJS) -o $(NAME)
 
+%.o: %.cpp
+	$(CXX) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
 clean:
 	$(RM) $(OBJS)
 
-fclean:	clean
+fclean: clean
 	$(RM) $(NAME)
 
-re:	fclean all
+re: fclean all
 
-.PHONY:	all clean fclean re
+.PHONY: all clean fclean re
