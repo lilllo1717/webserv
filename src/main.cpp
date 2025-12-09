@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 	if (listen(socket_fd, 10) < 0)
 	{
 		std::cerr << "listen to socket failed.\n";
+
 		return (1);
 	}
 
