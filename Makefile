@@ -4,7 +4,9 @@ CFLAGS          = -Wall -Wextra -Werror
 INCLUDES        = -I include
 
 SRCS            = src/main.cpp \
-                  src/server/server.cpp
+                  src/server/Server.cpp \
+                 
+
 
 OBJS            = $(SRCS:.cpp=.o)
 NAME            = webserv
