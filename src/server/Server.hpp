@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <map>
 #include "../client/Client.hpp"
+#include "../server/Server.hpp"
 
 class Server
 {
@@ -38,8 +39,8 @@ class Server
         void setListenPort(int port);
         int getListenPort() const;
 
-        bool isStarted() const;
         int getListenFd() const;
+        bool isStarted() const;
 
         void setReusableAddress(bool reusable);
         bool getReusableAddress() const;
@@ -57,6 +58,7 @@ class Server
         void addBytesReceived(size_t bytes);
         size_t getBytesReceived() const;
 
-
+        void start();
+        void stop();
 
 };

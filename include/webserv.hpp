@@ -12,9 +12,8 @@
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netdb.h> 
-# include "Client.hpp"
-# include "Server.hpp"
-
+// # include "../src/client/Client.hpp"
+// # include "../src/server/Server.hpp"
 
 
 #endif

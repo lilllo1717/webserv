@@ -21,6 +21,7 @@ class Client
     public:
         Client();
         Client(int socketFd);
+        Client& operator=(const Client& other);
         virtual ~Client();
 
         void setSocketFd(int socketFd);
