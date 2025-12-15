@@ -4,13 +4,15 @@
 # include <vector>
 # include <string>
 
+# include "tokenizer.hpp"
+
 // Specific URL path inside that website
 struct routeConfig 
 {
 	std::string					path;
 	std::vector<std::string>	httpMethods;	// GET, POST, and DELETE
 	std::string					rootDir; // directory to serve
-	std::string					defaultFile; // default fize
+	std::string					defaultFile; // default file
 	bool						allow_upload = true; // turns on and off the upload feature
 	std::string					uploadPath; // where to store uploaded files
 	std::string					cgiExt;	// ".php" in our case
@@ -24,6 +26,28 @@ struct serverConfig
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::vector<std::string>	errorPages; // 404, 400, 500, etc.
 	std::vector<routeConfig>	routes; // routes inside this server
+};
+
+// Puts everything together into a vector of server structs
+struct mainConfig
+{
+	std::vector<serverConfig> servers;
+};
+
+class Parser
+{
+	private:
+		std::vector<Token>	_tokens; // vector container of token structs
+		size_t				_position; // position of token in vector of tokens
+
+	public:
+		Parser();
+		Parser(const std::vector<Token>& tokens);
+		Parser(const Parser& other);
+		~Parser();
+
+		mainConfig	parse();
+
 };
 
 #endif
