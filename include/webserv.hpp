@@ -5,13 +5,14 @@
 # include <iomanip>
 # include <cmath>
 # include <stdio.h>
-# include <stdlib.h>
+# include <cstdlib>
 # include <unistd.h>
-# include <string.h>
+# include <cstring> 
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netdb.h> 
+# include <arpa/inet.h>
 // # include "../src/client/Client.hpp"
 // # include "../src/server/Server.hpp"
 

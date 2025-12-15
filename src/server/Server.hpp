@@ -8,7 +8,6 @@
 #include <iomanip>
 #include <map>
 #include "../client/Client.hpp"
-#include "../server/Server.hpp"
 
 class Server
 {

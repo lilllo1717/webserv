@@ -5,7 +5,7 @@ INCLUDES        = -I include
 
 SRCS            = src/main.cpp \
                   src/server/Server.cpp \
-				  src/client/Client.cpp \	
+				  src/client/Client.cpp 
 
                  
 
