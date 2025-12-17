@@ -140,6 +140,22 @@ void Server::start()
         _started = false;
         return;
     }
+    if (fcntl(_listenFd, F_SETFL, O_NONBLOCK) == -1)
+    {
+        std::cerr << "fcntl failed.\n";
+        _started = false;
+        return;
+    }
+    /*
+        Mark this file descriptor so it is automatically closed on exec()
+        fdtable[listenFd].flags |= FD_CLOEXEC
+    */
+    if (fcntl(_listenFd, F_SETFD, FD_CLOEXEC) == -1)
+    {
+        std::cerr << "fcntl failed.\n";
+        _started = false;
+        return;
+    }
     int opt = 1;
     if (setsockopt(_listenFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 	{
