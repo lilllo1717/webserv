@@ -14,8 +14,8 @@
 # include <netdb.h> 
 # include <arpa/inet.h>
 # include <fcntl.h>
-// # include "../src/client/Client.hpp"
-// # include "../src/server/Server.hpp"
+# include "../src/client/Client.hpp"
+# include "../src/server/Server.hpp"
 
 
 #endif

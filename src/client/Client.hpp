@@ -1,3 +1,5 @@
+#ifndef CLIENT_HPP
+# define CLIENT_HPP
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -46,3 +48,5 @@ class Client
         size_t getSendLimit() const;
 
 };
+
+#endif

@@ -1,3 +1,5 @@
+#ifndef SERVER_HPP
+# define SERVER_HPP
 
 
 #include <stdio.h>
@@ -61,3 +63,5 @@ class Server
         void stop();
 
 };
+
+#endif

@@ -7,8 +7,8 @@
 
 
 Server::Server()
-    :   _hostAddress(""),
-        _listenPort(0),
+    :   _hostAddress("127.0.0.1"),
+        _listenPort(8080),
         _listenFd(-1),
         _started(false),
         _reusableAddress(false),
@@ -140,12 +140,12 @@ void Server::start()
         _started = false;
         return;
     }
-    if (fcntl(_listenFd, F_SETFL, O_NONBLOCK) == -1)
-    {
-        std::cerr << "fcntl failed.\n";
-        _started = false;
-        return;
-    }
+    // if (fcntl(_listenFd, F_SETFL, O_NONBLOCK) == -1)
+    // {
+    //     std::cerr << "fcntl failed.\n";
+    //     _started = false;
+    //     return;
+    // }
     /*
         Mark this file descriptor so it is automatically closed on exec()
         fdtable[listenFd].flags |= FD_CLOEXEC
@@ -197,5 +197,10 @@ void Server::start()
 void Server::stop()
 {
     _started = false;
+    if (_listenFd != -1)
+    {
+        close(_listenFd);
+    }
+
     std::cout << "Server stopped.\n";
 }
