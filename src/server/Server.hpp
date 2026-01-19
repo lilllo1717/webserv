@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <iostream>
+#include <vector>
+#include <poll.h>
 #include <iomanip>
 #include <map>
 #include "../client/Client.hpp"
@@ -21,6 +23,7 @@ class Server
         bool                    _reusableAddress;
         bool                    _optionKeepAlive;
         std::map<int, Client>   _clients;
+        std::vector<pollfd>     _poll_fds;
         size_t                  _bytesSent;
         size_t                  _bytesReceived;
 
@@ -60,6 +63,7 @@ class Server
         size_t getBytesReceived() const;
 
         void start();
+        void run();
         void stop();
 
 };

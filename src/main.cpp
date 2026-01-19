@@ -25,31 +25,33 @@ int main(int argc, char **argv)
 {
 	// if (argc != 2)
 	// 	return (1);
+	// std::vector<pollfd> poll_fds;
 
 	(void)argv;
 	(void)argc;
 
-	struct sockaddr_in client_address;
-	socklen_t	client_len;
-	int new_socket_fd;
-	char	buffer[256];
-	int 	byte_read;
+	// struct sockaddr_in client_address;
+	// socklen_t	client_len;
+	// int new_socket_fd;
+	// char	buffer[256];
+	// int 	byte_read;
 
 	Server server;
 	server.start();
 
-	client_len = sizeof(client_address);
-	new_socket_fd = accept(server.getListenFd(), (struct sockaddr*)&client_address, &client_len);
-	if (new_socket_fd < 0)
-	{
-		std::cerr << "accept failed.\n";
-		return (1);
-	}
-	send(new_socket_fd, "Hello, world!\n", 13, 0);
-	bzero(buffer, 256);
+	// client_len = sizeof(client_address);
+	// new_socket_fd = accept(server.getListenFd(), (struct sockaddr*)&client_address, &client_len);
+	// if (new_socket_fd < 0)
+	// {
+	// 	std::cerr << "accept failed.\n";
+	// 	return (1);
+	// }
+	// send(new_socket_fd, "Hello, world!\n", 13, 0);
+	// bzero(buffer, 256);
 
-	byte_read = read(new_socket_fd, buffer, 255);
-	printf("Message: %s\n", buffer);
+	// byte_read = read(new_socket_fd, buffer, 255);
+	// printf("Message: %s\n", buffer);
+	server.run();
 	server.stop();
 	return (0);
 }

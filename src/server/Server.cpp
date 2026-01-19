@@ -36,6 +36,8 @@ Server& Server::operator=(const Server& other)
 }
 Server::~Server()
 {
+    if (_listenFd != -1)
+        close(_listenFd);
     std::cout << "Server Destructor called.\n";
 }
 
@@ -119,8 +121,8 @@ size_t Server::getBytesSent() const
 {
     return _bytesSent;
 }
-
 void Server::addBytesReceived(size_t bytes)
+
 {
     _bytesReceived += bytes;
 }
@@ -140,12 +142,12 @@ void Server::start()
         _started = false;
         return;
     }
-    // if (fcntl(_listenFd, F_SETFL, O_NONBLOCK) == -1)
-    // {
-    //     std::cerr << "fcntl failed.\n";
-    //     _started = false;
-    //     return;
-    // }
+    if (fcntl(_listenFd, F_SETFL, O_NONBLOCK) == -1)
+    {
+        std::cerr << "fcntl failed.\n";
+        _started = false;
+        return;
+    }
     /*
         Mark this file descriptor so it is automatically closed on exec()
         fdtable[listenFd].flags |= FD_CLOEXEC
@@ -192,6 +194,77 @@ void Server::start()
     _started = true;
     std::cout << "Server started on " << _hostAddress << ":" << _listenPort << "\n";
 
+}
+
+void Server::run()
+{
+    _poll_fds.clear();
+
+    struct sockaddr_in client_address;
+	socklen_t	client_len;
+	int new_socket_fd;
+
+    pollfd p;
+    p.fd = _listenFd;
+    p.events = POLLIN;
+    p.revents = 0;
+    _poll_fds.push_back(p);
+
+    while (_started)
+    {
+        // std::cerr << "we started.\n";
+        int ready_fds = poll(_poll_fds.data(), _poll_fds.size(), -1);
+        if (ready_fds < 0)
+        {
+            std::cerr << "poll failed.\n";
+            // close(_listenFd);
+            // _started = false;
+            break ;
+        }
+        for (size_t i = 0; i < _poll_fds.size(); i++)
+        {
+            if (_poll_fds[i].revents == 0)
+                continue;
+
+            if (_poll_fds[i].fd == _listenFd && (_poll_fds[i].revents & POLLIN))
+            {
+                while (true)
+                {
+                    client_len = sizeof(client_address);
+                    new_socket_fd = accept(_listenFd, (struct sockaddr*)&client_address, &client_len);
+                    if (new_socket_fd < 0)
+                    {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK)
+                            break;
+                        _started = false;
+                        break;
+                    }
+                    _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
+                }
+            }
+            else if (_poll_fds[i].fd != _listenFd && (_poll_fds[i].revents & POLLIN))
+            {
+                char	buffer[1024];
+                ssize_t message_size = recv(_poll_fds[i].fd, buffer, sizeof(buffer), 0);
+                if (message_size <= 0)
+                {
+                    if (errno != EAGAIN && errno != EWOULDBLOCK)
+                    {
+                        close(_poll_fds[i].fd);
+                        _poll_fds.erase(_poll_fds.begin() + i);
+                        --i;
+                    }
+                }
+                else
+                {
+                    write(1, buffer, message_size);
+                    send(_poll_fds[i].fd, buffer, message_size, 0);
+                }
+            }
+            _poll_fds[i].revents = 0;
+        }
+    }
+    
 }
 
 void Server::stop()

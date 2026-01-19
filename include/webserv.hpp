@@ -13,7 +13,9 @@
 # include <netinet/in.h>
 # include <netdb.h> 
 # include <arpa/inet.h>
+# include <vector>
 # include <fcntl.h>
+# include <poll.h>
 # include "../src/client/Client.hpp"
 # include "../src/server/Server.hpp"
 
