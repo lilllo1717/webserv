@@ -2,6 +2,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <cstring>
+#include <unistd.h>
 #include "Server.hpp"
 #include "../../include/webserv.hpp"
 
@@ -100,14 +104,14 @@ void Server::removeClient(int socketFd)
 
 Client* Server::getClient(int socketFd)
 {
-    std::map<int, Client>::iterator it = _clients.find(socketFd);
+    std::unordered_map<int, Client>::iterator it = _clients.find(socketFd);
     if (it != _clients.end()) {
         return &(it->second);
     }
     return NULL;
 }
 
-const std::map<int, Client>& Server::getClients() const
+const std::unordered_map<int, Client>& Server::getClients() const
 {
     return _clients;
 }
@@ -122,7 +126,6 @@ size_t Server::getBytesSent() const
     return _bytesSent;
 }
 void Server::addBytesReceived(size_t bytes)
-
 {
     _bytesReceived += bytes;
 }
@@ -240,25 +243,47 @@ void Server::run()
                         break;
                     }
                     _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
+                    addClient(new_socket_fd);
                 }
             }
             else if (_poll_fds[i].fd != _listenFd && (_poll_fds[i].revents & POLLIN))
             {
-                char	buffer[1024];
+                char buffer[1024];
                 ssize_t message_size = recv(_poll_fds[i].fd, buffer, sizeof(buffer), 0);
-                if (message_size <= 0)
+                int client_fd = _poll_fds[i].fd;
+                
+                if (message_size == 0)
                 {
-                    if (errno != EAGAIN && errno != EWOULDBLOCK)
+                    // Client disconnected
+                    close(client_fd);
+                    removeClient(client_fd);
+                    _poll_fds.erase(_poll_fds.begin() + i);
+                    --i;
+                    continue;
+                }
+                else if (message_size < 0)
+                {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
                     {
-                        close(_poll_fds[i].fd);
-                        _poll_fds.erase(_poll_fds.begin() + i);
-                        --i;
+                        // No data available right now, continue
+                        continue;
                     }
+                    std::cerr << "recv error on fd " << client_fd << ": " << strerror(errno) << "\n";
+                    close(client_fd);
+                    removeClient(client_fd);
+                    _poll_fds.erase(_poll_fds.begin() + i);
+                    --i;
+                    continue;
                 }
                 else
                 {
-                    write(1, buffer, message_size);
-                    send(_poll_fds[i].fd, buffer, message_size, 0);
+                    Client* client = getClient(client_fd);
+                    if (!client)
+                        continue;
+                    client->appendToReceiveBuffer(std::string(buffer, message_size));
+                    client->appendToSendBuffer(std::string(buffer, message_size));
+                    addBytesReceived(message_size);
+                    std::cout << "Received " << message_size << " bytes from client " << client_fd << "\n";
                 }
             }
             _poll_fds[i].revents = 0;
