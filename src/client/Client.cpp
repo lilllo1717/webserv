@@ -76,6 +76,7 @@ size_t Client::getBytesReceived() const
 void Client::appendToReceiveBuffer(const std::string& data)
 {
     _receiveBuffer += data;
+    _bytesReceived += data.size();
 }
 const std::string& Client::getReceiveBuffer() const
 {
@@ -85,6 +86,8 @@ const std::string& Client::getReceiveBuffer() const
 void Client::appendToSendBuffer(const std::string& data)
 {
     _sendBuffer += data;
+    _bytesSent += data.size();
+    
 }
 
 const std::string& Client::getSendBuffer() const
