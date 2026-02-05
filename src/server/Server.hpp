@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <map>
 #include <unordered_map>
+#include <memory>
 #include "../client/Client.hpp"
 
 class Server
@@ -23,8 +24,7 @@ class Server
         bool                    _started;
         bool                    _reusableAddress;
         bool                    _optionKeepAlive;
-        std::unordered_map<int, Client>   _clients;
-        std::vector<pollfd>     _poll_fds;
+        std::unordered_map<int, std::unique_ptr<Client>>   _clients;
         size_t                  _bytesSent;
         size_t                  _bytesReceived;
 
@@ -56,7 +56,7 @@ class Server
         void addClient(int socketFd);
         void removeClient(int socketFd);
         Client* getClient(int socketFd);
-        const std::unordered_map<int, Client>& getClients() const;
+        const std::unordered_map<int, std::unique_ptr<Client>>& getClients() const;
         void addBytesSent(size_t bytes);
         size_t getBytesSent() const;
 

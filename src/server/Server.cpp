@@ -275,16 +275,47 @@ void Server::run()
                     --i;
                     continue;
                 }
-                else
+
+                Client* client = getClient(client_fd);
+                if (!client)
+                    continue;
+                client->appendToReceiveBuffer(std::string(buffer, message_size));
+                client->appendToSendBuffer(std::string(buffer, message_size));
+                _poll_fds[i].events |= POLLOUT;
+                addBytesReceived(message_size);
+                std::cout << "Received " << message_size << " bytes from client " << client_fd << "\n";
+
+            }
+
+            if (_poll_fds[i].fd != _listenFd && (_poll_fds[i].revents & POLLOUT))
+            { 
+                int client_fd = _poll_fds[i].fd;
+                Client* client = getClient(client_fd);
+                if (!client)
+                    continue;
+                const std::string& sendBuffer = client->getSendBuffer();
+                if (sendBuffer.empty())
                 {
-                    Client* client = getClient(client_fd);
-                    if (!client)
-                        continue;
-                    client->appendToReceiveBuffer(std::string(buffer, message_size));
-                    client->appendToSendBuffer(std::string(buffer, message_size));
-                    addBytesReceived(message_size);
-                    std::cout << "Received " << message_size << " bytes from client " << client_fd << "\n";
+                    _poll_fds[i].events &= ~POLLOUT;
+                    continue;
                 }
+                ssize_t bytes_sent = send(client_fd, sendBuffer.c_str(), sendBuffer.size(), 0);
+                if (bytes_sent < 0)
+                {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    {
+                        continue;
+                    }
+                    std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
+                    close(client_fd);
+                    removeClient(client_fd);
+                    _poll_fds.erase(_poll_fds.begin() + i);
+                    --i;
+                    continue;
+                }
+                client->appendToSendBuffer(sendBuffer.substr(bytes_sent));
+                addBytesSent(bytes_sent);
+                std::cout << "Sent " << bytes_sent << " bytes to client " << client_fd << "\n";
             }
             _poll_fds[i].revents = 0;
         }
