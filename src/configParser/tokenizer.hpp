@@ -29,15 +29,24 @@ class Tokenizer
 		int			_line;
 		int			_col;
 
+		char	curPos() const;
+		char	cur_or(char fallback) const;
+		bool	isEOF();
+		void	moveForward();
+		void	skipWhitespaceAndComments();
+
+		Token	readIdentifier();
+		Token	readQuotedWord();
+
 	public:
 		// Orthodox canonical form
-		Tokenizer();
+		Tokenizer(std::string& input);
 		Tokenizer(const Tokenizer& other);
 		Tokenizer&	operator=(const Tokenizer& other);
 		~Tokenizer();
 
-		Token	next_token();
-		Token	peek_token();
+		Token	nextToken();
+		Token	peekToken();
 
 		// Getters
 		std::string	getSrc() const;

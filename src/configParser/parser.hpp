@@ -34,6 +34,8 @@ struct mainConfig
 	std::vector<serverConfig> servers;
 };
 
+// create seperate struct for 
+
 class Parser
 {
 	private:
