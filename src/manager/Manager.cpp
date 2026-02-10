@@ -1,116 +1,48 @@
-#include "Client.hpp"
 
+#include "Manager.hpp"
 
-Client::Client()
-    :   _socketFd(-1),
-        _bytesSent(0),
-        _bytesReceived(0),
-        _receiveBuffer(""),
-        _bufferLimit(4096),
-        _sendBuffer(""),
-        _sendLimit(4096)
+Manager::Manager()
+    :
+        _servers(),
+        _clients(),
+        _clientFdToServer(),
+        _listenFdToServers(),
+        _poll_fds()
 {
-    std::cout << "Client default Constructor called.\n";
-}
-
-Client::Client(int socketFd)
-    :   _socketFd(socketFd),
-        _bytesSent(0),
-        _bytesReceived(0),
-        _receiveBuffer(""),
-        _bufferLimit(4096),
-        _sendBuffer(""),
-        _sendLimit(4096)
-{
-    std::cout << "Client Constructor called.\n";
+    std::cout << "Manager Constructor called.\n";
 }
 
-Client& Client::operator=(const Client& other)
+Manager::~Manager()
 {
-    if (this != &other) {
-        _socketFd = other._socketFd;
-        _bytesSent = other._bytesSent;
-        _bytesReceived = other._bytesReceived;
-        _receiveBuffer = other._receiveBuffer;
-        _bufferLimit = other._bufferLimit;
-        _sendBuffer = other._sendBuffer;
-        _sendLimit = other._sendLimit;
-    }
-    return *this;
-}
-Client::~Client()
-{
-    std::cout << "Client Destructor called.\n";
+    std::cout << "Manager Destructor called.\n";
 }
 
-void Client::setSocketFd(int socketFd)
+void Manager::addServer(std::unique_ptr<Server> server)
 {
-    _socketFd = socketFd;
+    int listenFd = server->getListenFd();
+    _listenFdToServers[listenFd].push_back(server.get());
+    _servers.push_back(std::move(server));
 }
 
-int Client::getSocketFd() const
+std::vector<std::unique_ptr<Server>>& Manager::getServers()
 {
-    return _socketFd;
+    return _servers;
 }
 
-void Client::addBytesSent(size_t bytes)
-{
-    _bytesSent += bytes;
-}
+// void Manager::run()
+// {
+//     _poll_fds.clear();
 
-size_t Client::getBytesSent() const
-{
-    return _bytesSent;
-}
+//     for (size_t i = 0; i < _servers.size(); i++)
+//     {
+//         pollfd p;
+//         p.fd = _servers[i]->getListenFd();
+//         p.events = POLLIN;
+//         p.revents = 0;
+//         _poll_fds.push_back(p);
+//     }
 
-void Client::addBytesReceived(size_t bytes)
-{
-    _bytesReceived += bytes;
-}
+//     while (true)
+//     {
+//         int ready_fds = poll(_poll_fds.data(), _poll_fds.size(), -1);
 
-size_t Client::getBytesReceived() const
-{
-    return _bytesReceived;
-}
-
-void Client::appendToReceiveBuffer(const std::string& data)
-{
-    _receiveBuffer += data;
-    _bytesReceived += data.size();
-}
-const std::string& Client::getReceiveBuffer() const
-{
-    return _receiveBuffer;
-}
-
-void Client::appendToSendBuffer(const std::string& data)
-{
-    _sendBuffer += data;
-    _bytesSent += data.size();
-    
-}
-
-const std::string& Client::getSendBuffer() const
-{
-    return _sendBuffer;
-}
-
-void Client::setBufferLimit(size_t limit)
-{
-    _bufferLimit = limit;
-}
-
-size_t Client::getBufferLimit() const
-{
-    return _bufferLimit;
-}
-
-void Client::setSendLimit(size_t limit)
-{
-    _sendLimit = limit;
-}
-
-size_t Client::getSendLimit() const
-{
-    return _sendLimit;
-}

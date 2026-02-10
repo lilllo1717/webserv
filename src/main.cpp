@@ -1,4 +1,7 @@
 #include "webserv.hpp"
+# include "../src/client/Client.hpp"
+# include "../src/server/Server.hpp"
+# include "../src/manager/Manager.hpp"
 
 
 // Create one listening socket
@@ -21,6 +24,46 @@
 // Sends data to that server
 // Optionally waits for a response
 
+
+
+void initializeConfig(serverConfig& config, const std::string& ip, int port)
+{
+	config.endpoint.ip = ip;
+	config.endpoint.port = port;
+}
+
+std::vector<Listener> buildListeners(std::vector<std::unique_ptr<Server>>& servers)
+{
+	std::vector<Listener> listeners;
+
+	for (size_t i = 0; i < servers.size(); i++)
+	{
+		std::string ip = servers[i]->getHostAddress();
+		int port = servers[i]->getListenPort();
+		bool found = false;
+		for (size_t j = 0; j < listeners.size(); j++)
+		{
+			if (ip == listeners[j].endpoint.ip && port == listeners[j].endpoint.port)
+			{
+				listeners[j].servers.push_back(servers[i].get());
+				found = true;
+				break;
+			}
+
+		}
+		if (!found)
+		{
+			Listener newListener;
+			newListener.endpoint.ip = ip;
+			newListener.endpoint.port = port;
+			newListener.servers.push_back(servers[i].get());
+			newListener.defaultServer = servers[i].get();
+			listeners.push_back(newListener);
+		}
+	}
+	return listeners;
+}
+
 int main(int argc, char **argv)
 {
 	// if (argc != 2)
@@ -36,8 +79,34 @@ int main(int argc, char **argv)
 	// char	buffer[256];
 	// int 	byte_read;
 
-	Server server;
-	server.start();
+	Manager manager;
+	std::vector<serverConfig> configs;
+	std::vector<Listener> listeners;
+
+	serverConfig config1;
+	serverConfig config2;
+	serverConfig config3;
+
+	initializeConfig(config1, "127.0.0.1", 8080);
+	initializeConfig(config2, "127.0.0.1", 8080);
+	initializeConfig(config3, "127.0.0.2", 8081);
+
+	configs.push_back(config1);
+	configs.push_back(config2);
+	configs.push_back(config3);
+
+	for (size_t i = 0; i < configs.size(); i++)
+	{
+		manager.addServer(std::make_unique<Server>(configs[i]));
+	}
+	
+	listeners = buildListeners(manager.getServers());
+	for (size_t i = 0; i < listeners.size(); i++)
+	{
+		std::cout << " listeners: "<< listeners[i].endpoint.ip << "\n";
+	}
+
+	// server.start();
 
 	// client_len = sizeof(client_address);
 	// new_socket_fd = accept(server.getListenFd(), (struct sockaddr*)&client_address, &client_len);
@@ -51,7 +120,7 @@ int main(int argc, char **argv)
 
 	// byte_read = read(new_socket_fd, buffer, 255);
 	// printf("Message: %s\n", buffer);
-	server.run();
-	server.stop();
+	// server.run();
+	// server.stop();
 	return (0);
 }

@@ -1,17 +1,17 @@
 #ifndef MANAGER_HPP
 # define MANAGER_HPP
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <iostream>
-#include <iomanip>
-#include <map>
-#include <unordered_map>
-#include <memory>
-#include "../client/Client.hpp"
-#include "../server/Server.hpp"
+# include <stdio.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <iostream>
+# include <iomanip>
+# include <map>
+# include <unordered_map>
+# include <memory>
+# include "../client/Client.hpp"
+# include "../server/Server.hpp"
 
 
 class Manager
@@ -32,7 +32,12 @@ class Manager
         Manager(const Manager&) = delete;
         
         void addServer(std::unique_ptr<Server> server);
+        std::vector<std::unique_ptr<Server>>& getServers();
+        // std::unordered_map<int, std::unique_ptr<Client>>& getClients();
+        // std::unordered_map<int, Server*>& getClientFdToServer();
+        // std::unordered_map<int, std::vector<Server*>>& getListenFdToServers();
         void run();
 };
+
 
 #endif

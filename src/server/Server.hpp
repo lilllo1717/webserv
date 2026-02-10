@@ -2,18 +2,20 @@
 # define SERVER_HPP
 
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <iostream>
-#include <vector>
-#include <poll.h>
-#include <iomanip>
-#include <map>
-#include <unordered_map>
-#include <memory>
-#include "../client/Client.hpp"
+# include <stdio.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <iostream>
+# include <vector>
+# include <poll.h>
+# include <iomanip>
+# include <map>
+# include <unordered_map>
+# include <memory>
+# include "../client/Client.hpp"
+# include "../src/configParser/parser.hpp"
+// # include "webserv.hpp"
 
 class Server
 {
@@ -35,7 +37,9 @@ class Server
 
     public:
         Server();
-        Server& operator=(const Server& other);
+        Server(const serverConfig& config);
+        Server(const Server&) = delete;
+        Server& operator=(const Server& other) = delete;
         virtual ~Server();
 
         void setHostAddress(const std::string& address);
@@ -68,5 +72,6 @@ class Server
         void stop();
 
 };
+
 
 #endif
