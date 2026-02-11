@@ -32,37 +32,7 @@ void initializeConfig(serverConfig& config, const std::string& ip, int port)
 	config.endpoint.port = port;
 }
 
-std::vector<Listener> buildListeners(std::vector<std::unique_ptr<Server>>& servers)
-{
-	std::vector<Listener> listeners;
 
-	for (size_t i = 0; i < servers.size(); i++)
-	{
-		std::string ip = servers[i]->getHostAddress();
-		int port = servers[i]->getListenPort();
-		bool found = false;
-		for (size_t j = 0; j < listeners.size(); j++)
-		{
-			if (ip == listeners[j].endpoint.ip && port == listeners[j].endpoint.port)
-			{
-				listeners[j].servers.push_back(servers[i].get());
-				found = true;
-				break;
-			}
-
-		}
-		if (!found)
-		{
-			Listener newListener;
-			newListener.endpoint.ip = ip;
-			newListener.endpoint.port = port;
-			newListener.servers.push_back(servers[i].get());
-			newListener.defaultServer = servers[i].get();
-			listeners.push_back(newListener);
-		}
-	}
-	return listeners;
-}
 
 int main(int argc, char **argv)
 {
@@ -81,7 +51,7 @@ int main(int argc, char **argv)
 
 	Manager manager;
 	std::vector<serverConfig> configs;
-	std::vector<Listener> listeners;
+	// std::vector<Listener> listeners;
 
 	serverConfig config1;
 	serverConfig config2;
@@ -99,12 +69,13 @@ int main(int argc, char **argv)
 	{
 		manager.addServer(std::make_unique<Server>(configs[i]));
 	}
-	
-	listeners = buildListeners(manager.getServers());
-	for (size_t i = 0; i < listeners.size(); i++)
-	{
-		std::cout << " listeners: "<< listeners[i].endpoint.ip << "\n";
-	}
+	manager.buildListenersFromServers();
+	manager.startListenersServers();
+	manager.run();
+	// for (size_t i = 0; i < listeners.size(); i++)
+	// {
+	// 	std::cout << " listeners: "<< listeners[i].endpoint.ip << "\n";
+	// }
 
 	// server.start();
 

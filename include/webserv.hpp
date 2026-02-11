@@ -32,6 +32,8 @@ struct Listener
     Server* defaultServer;
 };
 
+std::vector<Listener> buildListeners(std::vector<std::unique_ptr<Server>>& servers);
+void    startListeners(std::vector<Listener>& listeners);
 
 
 #endif

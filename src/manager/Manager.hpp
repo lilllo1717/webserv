@@ -12,7 +12,9 @@
 # include <memory>
 # include "../client/Client.hpp"
 # include "../server/Server.hpp"
+# include "../configParser/parser.hpp"
 
+struct Listener;
 
 class Manager
 {
@@ -20,9 +22,12 @@ class Manager
         std::vector<std::unique_ptr<Server>> _servers;
         std::unordered_map<int, std::unique_ptr<Client>>   _clients; // key: client socket fd, value: client pointer
         std::unordered_map<int, Server*>   _clientFdToServer; // key: client socket fd, value: server pointer
-        std::unordered_map<int, std::vector<Server*>> _listenFdToServers;
+        // std::unordered_map<int, std::vector<Server*>> _listenFdToServers;
 
         std::vector<pollfd>     _poll_fds;
+        std::vector<Listener> _listeners;
+
+        std::unordered_map<int, size_t> _listenFdtoListenerIndex; // key: listen socket fd, value: index in _listeners vector
 
     public:
         Manager();
@@ -32,7 +37,16 @@ class Manager
         Manager(const Manager&) = delete;
         
         void addServer(std::unique_ptr<Server> server);
+        // void addClient(int socketFd, Server* server);
+        void addClient(int socketFd);
+        void removeClient(int socketFd);
+        Client* getClient(int socketFd);
+        Server* getServerByClientFd(int socketFd);
+        void setListeners();
+        std::vector<Listener>& getListeners();
         std::vector<std::unique_ptr<Server>>& getServers();
+        void buildListenersFromServers();
+        void startListenersServers();
         // std::unordered_map<int, std::unique_ptr<Client>>& getClients();
         // std::unordered_map<int, Server*>& getClientFdToServer();
         // std::unordered_map<int, std::vector<Server*>>& getListenFdToServers();

@@ -114,3 +114,15 @@ size_t Client::getSendLimit() const
 {
     return _sendLimit;
 }
+
+void Client::clearBuffer(size_t bytes)
+{
+    if (bytes >= _sendBuffer.size())
+    {
+        _sendBuffer.clear();
+    }
+    else
+    {
+        _sendBuffer.erase(0, bytes);
+    }
+}

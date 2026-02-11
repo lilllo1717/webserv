@@ -47,6 +47,8 @@ class Client
         void setSendLimit(size_t limit);
         size_t getSendLimit() const;
 
+        void clearBuffer(size_t bytes);
+
 };
 
 #endif
