@@ -3,14 +3,14 @@
 
 # include <iostream>
 
-enum tokenType
+enum class tokenType
 {
 	TOKEN_WORD, // "lister", "server", "location", etc.
 	TOKEN_LBRACE, // {
 	TOKEN_RBRACE, // }
 	TOKEN_SEMICOLON, // ;
 	TOKEN_EOF,
-	TOKEN_ERROR,
+	TOKEN_ERROR, // invalid char or unterminated string
 };
 
 struct Token
@@ -19,6 +19,9 @@ struct Token
 	std::string	value;
 	int			line; // returns the line the token is in; useful for debugging/error handling
 	int			column; // returns the column the token starts in; useful for debugging/error handling
+
+	Token(tokenType t = tokenType::TOKEN_EOF, std::string v = "", int ln = 1, int col = 1)
+		: type(t), value(v), line(ln), column(col) {}
 };
 
 class Tokenizer
