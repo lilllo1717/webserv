@@ -1,5 +1,17 @@
 #include "tokenizer.hpp"
 
+std::string	readFile(const std::string& path)
+{
+    std::ifstream inputFile(path.c_str());
+    if (!inputFile)
+        throw std::runtime_error("Error opening input file");
+
+    std::ostringstream buffer;
+	buffer << inputFile.rdbuf();
+
+    return buffer.str();
+}
+
 Tokenizer::Tokenizer(std::string& input): _src(input), _index(0), _line(1), _col(1) {}
 
 char	Tokenizer::curPos() const
@@ -7,12 +19,6 @@ char	Tokenizer::curPos() const
 	if (_index >= _src.size())
 		return '\0';
 	return (_src[_index]);
-}
-
-char	Tokenizer::cur_or(char fallback) const
-{
-	char c = curPos();
-	return (c == '\0') ? fallback : c;
 }
 
 bool	Tokenizer::isEOF()
@@ -39,7 +45,7 @@ void	Tokenizer::skipWhitespaceAndComments()
 {
 	while (!isEOF())
 	{
-		while (std::isspace(curPos()))
+		while (std::isspace(static_cast<unsigned char>(curPos())))
 			moveForward();
 		if (curPos() == '#')
 		{
@@ -111,9 +117,10 @@ Token	Tokenizer::readQuotedWord()
 					out.push_back('\t');
 					break ;
 				default:
-					out.push_back('\e');
+					out.push_back(e);
 					break ;
 			}
+			moveForward();
 		}
 		else
 		{
@@ -122,7 +129,7 @@ Token	Tokenizer::readQuotedWord()
 		}
 	}
 
-	if (curPos() != '"')
+	if (curPos() != '"' || isEOF())
 		return (Token(tokenType::TOKEN_ERROR, "unterminated string", startLine, startCol)); // string with unclosed quote
 
 	moveForward(); // consume closing quote
@@ -131,6 +138,8 @@ Token	Tokenizer::readQuotedWord()
 
 Token	Tokenizer::nextToken()
 {
+	skipWhitespaceAndComments();
+
 	const int	startLine = _line;
 	const int	startCol = _col;
 
@@ -159,6 +168,9 @@ Token	Tokenizer::nextToken()
 
 	if (c == '"')
 		return (readQuotedWord());
+
+	if (isIdentifierChar(c))
+		return readIdentifier();
 	
 	std::string	errorMsg = "Unexpected character: '";
 	errorMsg.push_back(c);
@@ -184,3 +196,35 @@ Token	Tokenizer::peekToken()
 
 	return (t);
 }
+
+int main(int argc, char** argv)
+{
+    if (argc != 2)
+    {
+        std::cerr << "Usage: ./webserv <config_file>\n";
+        return 1;
+    }
+
+    try
+    {
+        std::string configText = readFile(argv[1]);
+
+        Tokenizer tokenizer(configText);
+
+        // test token output
+        Token token;
+        do {
+            token = tokenizer.nextToken();
+            std::cout << token.value << std::endl;
+        } while (token.type != tokenType::TOKEN_EOF);
+
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
+

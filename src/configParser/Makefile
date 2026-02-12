@@ -2,7 +2,7 @@ CXX				= c++
 RM				= rm -f
 CXXFLAGS		= -Wall -Wextra -Werror -MMD -MP
 
-SRCS			=	tokenizer.cpp readFile.cpp
+SRCS			=	tokenizer.cpp
 					
 OBJS			= $(SRCS:.cpp=.o)
 DEPS			= $(OBJS:.o=.d)

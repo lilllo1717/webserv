@@ -2,6 +2,10 @@
 # define TOKENIZER_HPP
 
 # include <iostream>
+# include <fstream>
+# include <string>
+# include <sstream>
+# include <stdexcept>
 
 enum class tokenType
 {
@@ -33,7 +37,6 @@ class Tokenizer
 		int			_col;
 
 		char	curPos() const;
-		char	cur_or(char fallback) const;
 		bool	isEOF();
 		void	moveForward();
 		void	skipWhitespaceAndComments();
@@ -44,9 +47,9 @@ class Tokenizer
 	public:
 		// Orthodox canonical form
 		Tokenizer(std::string& input);
-		Tokenizer(const Tokenizer& other);
+		// Tokenizer(const Tokenizer& other);
 		Tokenizer&	operator=(const Tokenizer& other);
-		~Tokenizer();
+		// ~Tokenizer();
 
 		Token	nextToken();
 		Token	peekToken();
@@ -57,5 +60,7 @@ class Tokenizer
 		int			getLine() const;
 		int			getCol() const;
 };
+
+std::string	readFile(const std::string& path);
 
 #endif
