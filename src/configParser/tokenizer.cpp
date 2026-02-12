@@ -197,6 +197,25 @@ Token	Tokenizer::peekToken()
 	return (t);
 }
 
+static const char*	printTokenType(tokenType t)
+{
+	switch (t)
+	{
+		case tokenType::TOKEN_WORD:
+			return "WORD";
+		case tokenType::TOKEN_LBRACE:
+			return "LEFT BRACE";
+		case tokenType::TOKEN_RBRACE:
+			return "RIGHT BRACE";
+		case tokenType::TOKEN_SEMICOLON:
+			return "SEMICOLON";
+		case tokenType::TOKEN_EOF:
+			return "EOF";
+		case tokenType::TOKEN_ERROR:
+			return "ERROR";
+	}
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -213,9 +232,13 @@ int main(int argc, char** argv)
 
         // test token output
         Token token;
-        do {
+        do
+		{
             token = tokenizer.nextToken();
-            std::cout << token.value << std::endl;
+			std::cout << "[" << token.line << ":" << token.column << "] "
+                  << printTokenType(token.type)
+                  << " -> \"" << token.value << "\""
+                  << std::endl;
         } while (token.type != tokenType::TOKEN_EOF);
 
     }
