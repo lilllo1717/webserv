@@ -7,8 +7,9 @@ SRCS            = src/main.cpp \
                   src/server/Server.cpp \
 				  src/client/Client.cpp \
 				  src/manager/Manager.cpp \
-				  src/Listeners.cpp
-# 				  src/configParser/parser.cpp \
+				  src/Listeners.cpp \
+				  src/http/HttpRequest.cpp
+# 				  src/configParser/parser.cpp 
 
 
                  

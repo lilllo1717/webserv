@@ -8,6 +8,7 @@
 # include <iostream>
 # include <iomanip>
 # include <map>
+# include "../http/Http.hpp"
 
 class Client
 {
@@ -19,6 +20,8 @@ class Client
         size_t      _bufferLimit;
         std::string _sendBuffer;
         size_t      _sendLimit;
+        struct HttpRequest _httpRequest;
+        struct HttpResponse _httpResponse;
 
     public:
         Client();
@@ -48,6 +51,9 @@ class Client
         size_t getSendLimit() const;
 
         void clearBuffer(size_t bytes);
+
+        HttpRequest& getHttpRequest();
+        HttpResponse& getHttpResponse();
 
 };
 

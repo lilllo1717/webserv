@@ -150,8 +150,8 @@ void Manager::run()
             }
             else if (!found && (_poll_fds[i].revents & POLLIN))
             {
-                char buffer[1024];
-                ssize_t message_size = recv(_poll_fds[i].fd, buffer, sizeof(buffer), 0);
+                char temp_buffer[1024];
+                ssize_t message_size = recv(_poll_fds[i].fd, temp_buffer, sizeof(temp_buffer), 0);
                 int client_fd = _poll_fds[i].fd;
                 
                 if (message_size == 0)
@@ -179,17 +179,19 @@ void Manager::run()
                 }
                 std::cerr << "DBG recv fd=" << client_fd
                 << " bytes=" << message_size
-                << " data=[" << std::string(buffer, message_size) << "]\n";
+                << " data=[" << std::string(temp_buffer, message_size) << "]\n";
 
 
                 Client* client = getClient(client_fd);
                 if (!client)
                     continue;
-                client->appendToReceiveBuffer(std::string(buffer, message_size));
-                client->appendToSendBuffer(std::string(buffer, message_size));
+                HttpRequest& request = client->getHttpRequest();
+                request.buffer.append(temp_buffer, message_size);
+                client->appendToReceiveBuffer(std::string(temp_buffer, message_size));
+                client->appendToSendBuffer(std::string(temp_buffer, message_size));
                 _poll_fds[i].events |= POLLOUT;
                 // addBytesReceived(message_size);
-                std::cout << "Received " << message_size << " bytes from client " << client_fd << "\n";
+                std::cout << "Received " << message_size << " bytes from client " << client_fd << "message: " << request.buffer << "\n";
 
             }
 
@@ -219,7 +221,7 @@ void Manager::run()
                     --i;
                     continue;
                 }
-                // Remove sent bytes from the send buffer
+                // Remove sent bytes from the send temp_buffer
                 client->clearBuffer(bytes_sent);
                 // addBytesSent(bytes_sent);
                 std::cout << "Sent " << bytes_sent << " bytes to client " << client_fd << "\n";

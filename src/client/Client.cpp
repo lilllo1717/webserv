@@ -8,7 +8,9 @@ Client::Client()
         _receiveBuffer(""),
         _bufferLimit(4096),
         _sendBuffer(""),
-        _sendLimit(4096)
+        _sendLimit(4096),
+        _httpRequest(),
+        _httpResponse()
 {
     std::cout << "Client default Constructor called.\n";
 }
@@ -20,7 +22,10 @@ Client::Client(int socketFd)
         _receiveBuffer(""),
         _bufferLimit(4096),
         _sendBuffer(""),
-        _sendLimit(4096)
+        _sendLimit(4096),
+        _httpRequest(),
+        _httpResponse()
+
 {
     std::cout << "Client Constructor called.\n";
 }
@@ -35,6 +40,7 @@ Client& Client::operator=(const Client& other)
         _bufferLimit = other._bufferLimit;
         _sendBuffer = other._sendBuffer;
         _sendLimit = other._sendLimit;
+        _httpRequest = other._httpRequest;
     }
     return *this;
 }
@@ -125,4 +131,14 @@ void Client::clearBuffer(size_t bytes)
     {
         _sendBuffer.erase(0, bytes);
     }
+}
+
+HttpRequest& Client::getHttpRequest()
+{
+    return _httpRequest;
+}
+
+HttpResponse& Client::getHttpResponse()
+{
+    return _httpResponse;
 }
