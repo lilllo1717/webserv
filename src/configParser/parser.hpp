@@ -55,6 +55,11 @@ class Parser
 		std::vector<Token>	_tokens; // vector container of token structs
 		size_t				_position; // position of token in vector of tokens
 
+
+		Token&	curPos();
+		bool	checkifEOF();
+		Token&	moveForward();
+
 	public:
 		Parser();
 		Parser(const std::vector<Token>& tokens);
