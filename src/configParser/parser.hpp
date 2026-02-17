@@ -3,6 +3,7 @@
 
 # include <vector>
 # include <string>
+# include <map>
 
 # include "tokenizer.hpp"
 
@@ -13,10 +14,21 @@ struct routeConfig
 	std::vector<std::string>	httpMethods;	// GET, POST, and DELETE
 	std::string					rootDir; // directory to serve
 	std::string					defaultFile; // default file
+
+	bool						autoindex = false;
+
+	bool						isRedirect = false;
+	int							redirectCode = 0;
+	std::string					redirectTarget;
+
+
 	bool						allow_upload = true; // turns on and off the upload feature
 	std::string					uploadPath; // where to store uploaded files
-	std::string					cgiExt;	// ".php" in our case
-	std::string					cgiPath;	// ".php" file path
+
+	// std::string					cgiExt;	// ".php" in our case
+	// std::string					cgiPath;	// ".php" file path
+
+	std::map<std::string, std::string>	cgi; // replaces the two data members above
 };
 
 // Apply to the whole virtual host/website
@@ -24,7 +36,8 @@ struct serverConfig
 {
 	std::vector<std::string>	listen; // IP address of server
 	std::vector<std::string>	serverNames; // list of domains/urls of website
-	std::vector<std::string>	errorPages; // 404, 400, 500, etc.
+	std::map<int, std::string>	errorPages; // 404, 400, 500, etc.
+	size_t						clientMaxBodySize = 0;
 	std::vector<routeConfig>	routes; // routes inside this server
 };
 
