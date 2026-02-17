@@ -187,9 +187,11 @@ void Manager::run()
                     continue;
                 HttpRequest& request = client->getHttpRequest();
                 request.buffer.append(temp_buffer, message_size);
-                client->appendToReceiveBuffer(std::string(temp_buffer, message_size));
-                client->appendToSendBuffer(std::string(temp_buffer, message_size));
-                _poll_fds[i].events |= POLLOUT;
+                HttpRequestParser::parse(request);
+                std::cout << "Parsed request method: " << request.method << "\n";
+                // client->appendToReceiveBuffer(std::string(temp_buffer, message_size));
+                // client->appendToSendBuffer(std::string(temp_buffer, message_size));
+                // _poll_fds[i].events |= POLLOUT;
                 // addBytesReceived(message_size);
                 std::cout << "Received " << message_size << " bytes from client " << client_fd << "message: " << request.buffer << "\n";
 
