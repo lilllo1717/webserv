@@ -56,18 +56,28 @@ class Parser
 		size_t				_position; // position of token in vector of tokens
 
 		// traversing through vector of tokens with some verification
-		Token&	currentPosition();
-		bool	checkifEOF();
-		Token&	moveForward();
-		Token&	verifyToken(tokenType tok, std::string& errorMessage);
-		Token&	checkTokenWord(std::string& word, std::string& errorMessage);
+		const Token&	currentPosition() const;
+		bool			checkifEOF();
+		const Token&	moveForward();
+		const Token&	verifyToken(tokenType tok, const std::string& errorMessage);
+		const Token&	checkTokenWord(const std::string& word, const std::string& errorMessage);
 
 		// parse client max body size based on suffixes (K, M, G)
-		size_t	parseClientMaxBodySize(std::string& nb);
+		size_t			parseClientMaxBodySize(std::string& nb);
+
+		std::vector<std::string>	readArgumentsLine();
+
+		// parse location block inside server block
+		void			parseInsideLocationBlock(routeConfig& rC);
+		routeConfig		parseLocationBlock();
+
+		// parse server block
+		void			parseInsideServerBlock(serverConfig& sC);
+		serverConfig	parseServerBlock();
 
 	public:
-		Parser();
-		Parser(const std::vector<Token>& tokens);
+		Parser(): _position(0) {}
+		Parser(const std::vector<Token>& tokens): _tokens(tokens), _position(0) {}
 		Parser(const Parser& other);
 		~Parser();
 
