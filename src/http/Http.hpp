@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
+#include <string>
+#include <string_view>
 
 enum BodyType
 {
@@ -58,10 +60,13 @@ struct HttpRequest
 
     /*    --------  Request line  ---------   */
 
-    /*     GET[SP]/index.html[SP]HTTP/1.1\r\n                              */
-    /*     Request-Line   = Method SP Request-URI SP HTTP-Version CRLF     */
-    /*     POST /cgi-bin/upload.py?user=tanja HTTP/1.1                     */
+    /*     GET[SP]/index.html[SP]HTTP/1.1\r\n                                           */
+    /*     Request-Line   = Method SP Request-URI SP HTTP-Version CRLF                  */
+    /*     POST /cgi-bin/upload.py?user=tanja HTTP/1.1                                  */
+    /*     http_URL = "http:" "//" host [ ":" port ] [ abs_path [ "?" query ]]          */
+    /*     Request-URI    = "*" | absoluteURI | abs_path | authority                    */
 
+    std::string requestLine;
     enum HTTP_Method method = HTTP_UNKNOWN;                          // GET POST DELETE
     std::string unparsed_uri;                          // "/path%2F..../?a=1"
     std::string uri_path;                        // parsed path
@@ -111,12 +116,59 @@ class HttpRequestParser
     public:
         static ParseResult parse(HttpRequest& request);
 
+        struct Cursor
+        {
+            std::size_t pos;
+            std::string_view str_view;
+
+            Cursor(std::string_view str)
+            {
+                pos = 0;
+                str_view = str;
+            }
+
+            bool check_eof() const
+            {
+                if (pos >= str_view.size())
+                    return true;
+                return false;
+            }
+
+            char peek_char() const
+            {
+                if (check_eof())
+                    return '\0';
+                return str_view[pos];
+            }
+
+            char get_char()
+            {
+                if (check_eof())
+                    return '\0';
+                char c = str_view[pos];
+                pos++;
+                return c;
+            }
+
+            void   skip_spaces()
+            {
+                while (!check_eof() && str_view[pos] == ' ')
+                    pos++;
+            }
+
+            std::size_t get_position()
+            {
+                return pos;
+            } 
+        };
+
     private:
         static ParseResult parseRequestLine(HttpRequest& request);
         static ParseResult parseRawRequestLine(std::string& requestLine, HttpRequest& request);
         static ParseResult parseHeader(HttpRequest& request);
         static ParseResult parseBody(HttpRequest& request);
-        static HTTP_Method parseMethodChunk(const std::string& methodChunk);
+        static HTTP_Method parseMethodChunk(std::string& requestLine, Cursor& cursor);
+        static std::string parseUriChunk(std::string& requestLine, Cursor& cursor);
 
 
 };
