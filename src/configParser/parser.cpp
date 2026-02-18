@@ -47,6 +47,41 @@ Token&	Parser::checkTokenWord(std::string& word, std::string& errorMessage)
 	return token;
 }
 
+size_t	Parser::parseClientMaxBodySize(std::string& nb)
+{
+	if (nb.empty())
+		throw std::runtime_error("Empty input");
+	
+	// Iterate until the suffix part of the string
+	size_t i = 0;
+	while (i < nb.size() && std::isdigit(static_cast<unsigned char>(nb[i])))
+		i++;
+	if (i == 0)
+		throw std::runtime_error("Size is 0: Invalid");
+	
+	// Convert the digit part into a number data type
+	size_t	convertedNb = 0;
+	size_t	j = 0;
+	while (j < i)
+	{
+		convertedNb = convertedNb * 10 + (nb[j] - '0');
+		j++;
+	}
+	if (i == nb.size())
+		return convertedNb;
+	if (i + 1 != nb.size())
+		throw std::runtime_error("Invalid suffix format");
+	
+	char	suffix = nb[i];
+	if (suffix == 'K')
+		return convertedNb * 1024;
+	if (suffix == 'M')
+		return convertedNb * 1024 * 1024;
+	if (suffix == 'G')
+		return convertedNb * 1024 * 1024 * 1024;
+	
+	throw std::runtime_error("Unknown suffix specified");
+}
 
 mainConfig	Parser::parse()
 {

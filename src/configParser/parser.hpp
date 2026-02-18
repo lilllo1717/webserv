@@ -55,12 +55,15 @@ class Parser
 		std::vector<Token>	_tokens; // vector container of token structs
 		size_t				_position; // position of token in vector of tokens
 
-
+		// traversing through vector of tokens with some verification
 		Token&	currentPosition();
 		bool	checkifEOF();
 		Token&	moveForward();
 		Token&	verifyToken(tokenType tok, std::string& errorMessage);
 		Token&	checkTokenWord(std::string& word, std::string& errorMessage);
+
+		// parse client max body size based on suffixes (K, M, G)
+		size_t	parseClientMaxBodySize(std::string& nb);
 
 	public:
 		Parser();
