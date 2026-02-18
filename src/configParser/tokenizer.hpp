@@ -32,11 +32,11 @@ class Tokenizer
 {
 	private:
 		std::string _src;
-		size_t		_index;
+		size_t		_idx;
 		int			_line;
 		int			_col;
 
-		char	curPos() const;
+		char	currentPosition() const;
 		bool	isEOF();
 		void	moveForward();
 		void	skipWhitespaceAndComments();
@@ -51,7 +51,7 @@ class Tokenizer
 		Tokenizer&	operator=(const Tokenizer& other);
 		// ~Tokenizer();
 
-		Token	nextToken();
+		Token	createToken();
 		Token	peekToken();
 
 		// Getters

@@ -12,18 +12,18 @@ std::string	readFile(const std::string& path)
     return buffer.str();
 }
 
-Tokenizer::Tokenizer(std::string& input): _src(input), _index(0), _line(1), _col(1) {}
+Tokenizer::Tokenizer(std::string& input): _src(input), _idx(0), _line(1), _col(1) {}
 
-char	Tokenizer::curPos() const
+char	Tokenizer::currentPosition() const
 {
-	if (_index >= _src.size())
+	if (_idx >= _src.size())
 		return '\0';
-	return (_src[_index]);
+	return (_src[_idx]);
 }
 
 bool	Tokenizer::isEOF()
 {
-	return _index >= _src.size();
+	return _idx >= _src.size();
 }
 
 void	Tokenizer::moveForward()
@@ -31,25 +31,25 @@ void	Tokenizer::moveForward()
 	if (isEOF())
 		return ;
 	
-	if (_src[_index] == '\n')
+	if (_src[_idx] == '\n')
 	{
 		_line++;
 		_col = 1;
 	}
 	else
 		_col++;
-	_index++;
+	_idx++;
 }
 
 void	Tokenizer::skipWhitespaceAndComments()
 {
 	while (!isEOF())
 	{
-		while (std::isspace(static_cast<unsigned char>(curPos())))
+		while (std::isspace(static_cast<unsigned char>(currentPosition())))
 			moveForward();
-		if (curPos() == '#')
+		if (currentPosition() == '#')
 		{
-			while(!isEOF() && curPos() != '\n')
+			while(!isEOF() && currentPosition() != '\n')
 				moveForward();
 			continue ;
 		}
@@ -77,9 +77,9 @@ Token	Tokenizer::readIdentifier()
 	const int	startCol = _col;
 
 	std::string out;
-	while (!isEOF() && isIdentifierChar(curPos()))
+	while (!isEOF() && isIdentifierChar(currentPosition()))
 	{
-		out.push_back(curPos());
+		out.push_back(currentPosition());
 		moveForward();
 	}
 	return Token(tokenType::TOKEN_WORD, out, startLine, startCol);
@@ -93,15 +93,17 @@ Token	Tokenizer::readQuotedWord()
 	moveForward();
 	std::string out;
 
-	while (!isEOF() && curPos() != '"')
+	while (!isEOF() && currentPosition() != '"')
 	{
-		if (curPos() == '\\')
+		if (currentPosition() == '\\')
 		{
 			moveForward();
 			if (isEOF())
 				break ;
 			
-			char e = curPos();
+			char e = currentPosition();
+					out.push_back('\t');
+					break ;
 			switch (e)
 			{
 				case '"':
@@ -124,19 +126,19 @@ Token	Tokenizer::readQuotedWord()
 		}
 		else
 		{
-			out.push_back(curPos());
+			out.push_back(currentPosition());
 			moveForward();
 		}
 	}
 
-	if (curPos() != '"' || isEOF())
+	if (currentPosition() != '"' || isEOF())
 		return (Token(tokenType::TOKEN_ERROR, "unterminated string", startLine, startCol)); // string with unclosed quote
 
 	moveForward(); // consume closing quote
 	return (Token(tokenType::TOKEN_WORD, out, startLine, startCol));
 }
 
-Token	Tokenizer::nextToken()
+Token	Tokenizer::createToken()
 {
 	skipWhitespaceAndComments();
 
@@ -146,7 +148,7 @@ Token	Tokenizer::nextToken()
 	if (isEOF())
 		return (Token(tokenType::TOKEN_EOF, "", startLine, startCol));
 
-	char c = curPos();
+	char c = currentPosition();
 
 	if (c == '{')
 	{
@@ -172,25 +174,25 @@ Token	Tokenizer::nextToken()
 	if (isIdentifierChar(c))
 		return readIdentifier();
 	
-	std::string	errorMsg = "Unexpected character: '";
-	errorMsg.push_back(c);
-	errorMsg.push_back('\'');
+	std::string	errorMessage = "Unexpected character: '";
+	errorMessage.push_back(c);
+	errorMessage.push_back('\'');
 	moveForward();
-	return Token(tokenType::TOKEN_ERROR, errorMsg, startLine, startCol);
+	return Token(tokenType::TOKEN_ERROR, errorMessage, startLine, startCol);
 }
 
 Token	Tokenizer::peekToken()
 {
 	// Save current state before peeking
-	std::size_t	savedPos = _index;
+	std::size_t	savedPos = _idx;
 	int	savedLine = _line;
 	int savedCol = _col;
 
 	// Peek at the next token
-	Token t = nextToken();
+	Token t = createToken();
 
 	// After peeking, go back to previous state
-	_index = savedPos;
+	_idx = savedPos;
 	_line = savedLine;
 	_col = savedCol;
 
@@ -234,7 +236,7 @@ int main(int argc, char** argv)
         Token token;
         do
 		{
-            token = tokenizer.nextToken();
+            token = tokenizer.createToken();
 			std::cout << "[" << token.line << ":" << token.column << "] "
                   << printTokenType(token.type)
                   << " -> \"" << token.value << "\""

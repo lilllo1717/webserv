@@ -1,10 +1,11 @@
 #include "parser.hpp"
 
 Parser::Parser() {};
-
 Parser::~Parser() {};
 
-Token&	Parser::curPos()
+// Traversing through the vector of tokens and doing some verification
+
+Token&	Parser::currentPosition()
 {
 	if (_position >= _tokens.size())
 	{
@@ -16,14 +17,34 @@ Token&	Parser::curPos()
 
 bool	Parser::checkifEOF()
 {
-	return curPos().type == tokenType::TOKEN_EOF;
+	return currentPosition().type == tokenType::TOKEN_EOF;
 }
 
 Token&	Parser::moveForward()
 {
 	if (!checkifEOF())
 		_position++;
-	return curPos();
+	return currentPosition();
+}
+
+Token&	Parser::verifyToken(tokenType tok, std::string& errorMessage)
+{
+	if (currentPosition().type == tokenType::TOKEN_ERROR)
+		std::cerr << "Error with verifying token: " << currentPosition().value << std::endl;
+	if (currentPosition().type != tok)
+		std::cerr << errorMessage << std::endl;
+	
+	Token&	token = currentPosition();
+	moveForward();
+	return token;
+}
+
+Token&	Parser::checkTokenWord(std::string& word, std::string& errorMessage)
+{
+	Token&	token = verifyToken(tokenType::TOKEN_WORD, errorMessage);
+	if (token.value != word)
+		std::cerr << "Token does not match relevant word" << std::endl;
+	return token;
 }
 
 

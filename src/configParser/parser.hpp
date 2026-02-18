@@ -56,9 +56,11 @@ class Parser
 		size_t				_position; // position of token in vector of tokens
 
 
-		Token&	curPos();
+		Token&	currentPosition();
 		bool	checkifEOF();
 		Token&	moveForward();
+		Token&	verifyToken(tokenType tok, std::string& errorMessage);
+		Token&	checkTokenWord(std::string& word, std::string& errorMessage);
 
 	public:
 		Parser();
