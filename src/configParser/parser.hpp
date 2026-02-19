@@ -60,7 +60,9 @@ class Parser
 		bool			checkifEOF();
 		const Token&	moveForward();
 		const Token&	verifyToken(tokenType tok, const std::string& errorMessage);
-		const Token&	checkTokenWord(const std::string& word, const std::string& errorMessage);
+		const Token& 	compareWord(const std::string& word, const std::string& msg);
+	
+		void	throwError(const std::string& message) const;
 
 		// parse client max body size based on suffixes (K, M, G)
 		size_t			parseClientMaxBodySize(std::string& nb);
@@ -78,8 +80,8 @@ class Parser
 	public:
 		Parser(): _position(0) {}
 		Parser(const std::vector<Token>& tokens): _tokens(tokens), _position(0) {}
-		Parser(const Parser& other);
-		~Parser();
+		// Parser(const Parser& other);
+		// ~Parser();
 
 		mainConfig	parse();
 

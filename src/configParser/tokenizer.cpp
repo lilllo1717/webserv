@@ -102,8 +102,8 @@ Token	Tokenizer::readQuotedWord()
 				break ;
 			
 			char e = currentPosition();
-					out.push_back('\t');
-					break ;
+			// out.push_back('\t');
+			// break ;
 			switch (e)
 			{
 				case '"':
@@ -197,59 +197,5 @@ Token	Tokenizer::peekToken()
 	_col = savedCol;
 
 	return (t);
-}
-
-static const char*	printTokenType(tokenType t)
-{
-	switch (t)
-	{
-		case tokenType::TOKEN_WORD:
-			return "WORD";
-		case tokenType::TOKEN_LBRACE:
-			return "LEFT BRACE";
-		case tokenType::TOKEN_RBRACE:
-			return "RIGHT BRACE";
-		case tokenType::TOKEN_SEMICOLON:
-			return "SEMICOLON";
-		case tokenType::TOKEN_EOF:
-			return "EOF";
-		case tokenType::TOKEN_ERROR:
-			return "ERROR";
-	}
-}
-
-int main(int argc, char** argv)
-{
-    if (argc != 2)
-    {
-        std::cerr << "Usage: ./webserv <config_file>\n";
-        return 1;
-    }
-
-    try
-    {
-        std::string configText = readFile(argv[1]);
-
-        Tokenizer tokenizer(configText);
-
-        // test token output
-        Token token;
-        do
-		{
-            token = tokenizer.createToken();
-			std::cout << "[" << token.line << ":" << token.column << "] "
-                  << printTokenType(token.type)
-                  << " -> \"" << token.value << "\""
-                  << std::endl;
-        } while (token.type != tokenType::TOKEN_EOF);
-
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << e.what() << std::endl;
-        return 1;
-    }
-
-    return 0;
 }
 

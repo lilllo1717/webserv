@@ -24,25 +24,38 @@ const Token&	Parser::moveForward()
 	return currentPosition();
 }
 
+void	Parser::throwError(const std::string& message) const
+{
+	std::ostringstream oss;
+	oss << "Error at " << currentPosition().line << ":" << currentPosition().column
+		<< ": " << message;
+	throw std::runtime_error(oss.str());
+}
+
 const Token&	Parser::verifyToken(tokenType tok, const std::string& errorMessage)
 {
 	if (currentPosition().type == tokenType::TOKEN_ERROR)
-		std::cerr << "Error with verifying token: " << currentPosition().value << std::endl;
+		throwError("Error with verifying token: " + currentPosition().value);
 	if (currentPosition().type != tok)
-		std::cerr << errorMessage << std::endl;
+		throwError(errorMessage);
 	
 	const Token&	token = currentPosition();
 	moveForward();
 	return token;
 }
 
-const Token&	Parser::checkTokenWord(const std::string& word, const std::string& errorMessage)
+const Token& Parser::compareWord(const std::string& word, const std::string& message)
 {
-	const Token&	token = verifyToken(tokenType::TOKEN_WORD, errorMessage);
-	if (token.value != word)
-		std::cerr << "Token does not match relevant word" << std::endl;
-	return token;
+    const Token& token = verifyToken(tokenType::TOKEN_WORD, message);
+    if (token.value != word)
+	{
+        std::ostringstream oss;
+        oss << message << " (got '" << token.value << "')";
+		throwError(oss.str());
+    }
+    return token;
 }
+
 
 std::vector<std::string>	Parser::readArgumentsLine()
 {
@@ -52,7 +65,7 @@ std::vector<std::string>	Parser::readArgumentsLine()
 	{
 		if (currentPosition().type == tokenType::TOKEN_LBRACE
 			|| currentPosition().type == tokenType::TOKEN_RBRACE)
-			std::cerr << "Unexpected brace in arguments line" << std::endl;
+			throwError("Unexpected brace in arguments line");
 		const Token&	tok = verifyToken(tokenType::TOKEN_WORD, "Expected argument");
 		arguments.push_back(tok.value);
 	}
@@ -173,16 +186,24 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected 'server' directive or 'location' directive");
 	const std::string& name = token.value;
 
+	if (name == "location")
+	{
+		sC.routes.push_back(parseLocationBlock());
+		return;
+	}
+
 	std::vector<std::string>	arguments = readArgumentsLine();
 
 	if (name == "listen")
 	{
-		sC.listen.push_back(arguments[0]);
+		if (!arguments.empty())
+			sC.listen.push_back(arguments[0]);
 		return;
 	}
 	if (name == "server_name")
 	{
-		sC.serverNames.push_back(arguments[0]);
+		if (!arguments.empty())
+			sC.serverNames.push_back(arguments[0]);
 		return;
 	}
 	if (name == "client_max_body_size")
@@ -198,16 +219,25 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 			const std::string& path = arguments.back();
 			for (size_t i = 0; i + 1 < arguments.size(); i++)
 			{
-				int errorCode = std::stoi(arguments[0]);
+				int errorCode = std::stoi(arguments[i]);
 				sC.errorPages[errorCode] = path;
 			}
 		}
 	}
-	if (name == "location")
-	{
-		sC.routes.push_back(parseLocationBlock());
-		return;
-	}
+}
+
+serverConfig Parser::parseServerBlock()
+{
+    compareWord("server", "Expected 'server' block");
+    verifyToken(tokenType::TOKEN_LBRACE, "Expected '{' after 'server'");
+
+    serverConfig sC;
+
+    while (!checkifEOF() && currentPosition().type != tokenType::TOKEN_RBRACE)
+        parseInsideServerBlock(sC);
+
+    verifyToken(tokenType::TOKEN_RBRACE, "Expected '}' to close server block");
+    return sC;
 }
 
 mainConfig	Parser::parse()
@@ -217,10 +247,79 @@ mainConfig	Parser::parse()
 	while (!checkifEOF())
 	{
 		if (currentPosition().type == tokenType::TOKEN_ERROR)
-			std::cerr << "Error with tokenizing" << std::endl;
+			throwError("Error with tokenizing");
 		if (currentPosition().type == tokenType::TOKEN_EOF)
 			break;
 		mC.servers.push_back(parseServerBlock());
 	}
 	return mC;
+}
+
+static const char*	printTokenType(tokenType t)
+{
+	switch (t)
+	{
+		case tokenType::TOKEN_WORD:
+			return "WORD";
+		case tokenType::TOKEN_LBRACE:
+			return "LEFT BRACE";
+		case tokenType::TOKEN_RBRACE:
+			return "RIGHT BRACE";
+		case tokenType::TOKEN_SEMICOLON:
+			return "SEMICOLON";
+		case tokenType::TOKEN_EOF:
+			return "EOF";
+		case tokenType::TOKEN_ERROR:
+			return "ERROR";
+	}
+}
+
+int main(int argc, char** argv)
+{
+    if (argc != 2)
+    {
+        std::cerr << "Usage: ./webserv <config_file>\n";
+        return 1;
+    }
+
+    try
+    {
+        std::string configText = readFile(argv[1]);
+
+        Tokenizer tokenizer(configText);
+
+        // test token output
+		std::vector<Token>	tokens;
+        Token token;
+        do
+		{
+            token = tokenizer.createToken();
+			tokens.push_back(token);
+			std::cout << "[" << token.line << ":" << token.column << "] "
+                  << printTokenType(token.type)
+                  << " -> \"" << token.value << "\""
+                  << std::endl;
+        } while (token.type != tokenType::TOKEN_EOF);
+
+		Parser parser(tokens);
+		mainConfig	mC = parser.parse();
+
+		for (size_t i = 0; i < mC.servers.size(); i++)
+		{
+			const serverConfig& sC = mC.servers[i];
+			std::cout << std::endl;
+			std::cout << "[Server " << i << "]" << std::endl;
+            std::cout << "  listen entries: " << sC.listen.size() << std::endl;
+            std::cout << "  server_names:   " << sC.serverNames.size() << std::endl;
+            std::cout << "  routes:         " << sC.routes.size() << std::endl;
+		}
+
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
 }
