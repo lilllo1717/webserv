@@ -168,7 +168,9 @@ class HttpRequestParser
         static ParseResult parseHeader(HttpRequest& request);
         static ParseResult parseBody(HttpRequest& request);
         static HTTP_Method parseMethodChunk(std::string& requestLine, Cursor& cursor);
-        static std::string parseUriChunk(std::string& requestLine, Cursor& cursor);
+        static ParseResult parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request);
+        static std::string parseUriChunkPath(HttpRequest& request, Cursor& cursor);
+        static std::string parseUriChunkQuery(HttpRequest& request, Cursor& cursor);
 
 
 };

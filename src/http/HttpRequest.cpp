@@ -1,37 +1,96 @@
 #include "Http.hpp"
 
-std::string HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& cursor)
-{
-    size_t start_uri;
-    // size_t  end_uri;
+// std::string HttpRequestParser::parseUriChunkPath(HttpRequest& request, Cursor& cursor)
+// {
 
+// };
+// std::string HttpRequestParser::parseUriChunkQuery(HttpRequest& request, Cursor& cursor)
+// {
+
+// };
+
+ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request)
+{
+    // size_t end_schema;
+    
+    
     size_t start_pos = cursor.get_position();
-    if (requestLine.compare(start_pos, 7, "http://") == 0)
-    {
-        cursor.pos+=7;
-        char c = cursor.get_char();
-        while (c != '/')
-            c = cursor.get_char();
-        start_uri = cursor.get_position() - 1;
-    }
-    else if (requestLine[start_pos] == '/')
+    size_t  end_uri = start_pos;
+    size_t start_uri = start_pos;
+    size_t start_query = start_pos;
+    size_t end_query = start_pos;
+    size_t end_unparsed_uri = start_pos;
+    size_t start_schema=start_pos;
+    bool has_query = false;
+
+    if ( start_pos < requestLine.size() && requestLine[start_pos] == '/')
     {
         start_uri = start_pos;
+        // return requestLine.substr(start_uri, requestLine.size());
+
     }
-    
-    char c = cursor.get_char();
-    std::cout << "c : [" << c << "]\n";
-    std::cout << "start_uri : [" << start_uri << "]\n";
 
-
-    while (c != ' ')
+    else if (requestLine.compare(start_pos, 7, "http://") == 0)
     {
-        c = cursor.get_char();
+        cursor.pos += 7;
+        start_schema = start_pos;
+        while (cursor.peek_char() != '/' && !cursor.check_eof())
+            cursor.pos++;
+        start_uri = cursor.get_position();
+        // std::cout << "end_schema : [" << requestLine.substr(start_uri, end_uri - start_uri) << "]\n";
+        // return requestLine.substr(start_schema, end_schema - start_schema);
+        
     }
-    size_t uri_len = cursor.get_position() - start_uri - 1;
+    else
+        return PARSE_ERROR;
+    while (cursor.peek_char() != '?' && cursor.peek_char() != ' ' && !cursor.check_eof())
+    {
+        cursor.pos++;
+    }
+    end_uri = cursor.get_position();
+    if (cursor.peek_char() == '?')
+    {
+        has_query = true;
+        start_query = cursor.get_position() + 1;
+        while (cursor.peek_char() != ' ' && !cursor.check_eof())
+        {
+            cursor.pos++;
+        }
+        end_query = cursor.get_position();
+    }
+    // std::cout << "char at  end_uri: " << requestLine[ end_uri]  << "\n";
+    if (has_query == true)
+        end_unparsed_uri = end_query;
+    else
+        end_unparsed_uri = end_uri;
+    request.unparsed_uri = requestLine.substr(start_schema, end_unparsed_uri - start_schema);
+    request.uri_path = requestLine.substr(start_uri, end_uri - start_uri);
+    request.uri_query = requestLine.substr(start_query, end_query - start_query);
+    // end_schema = cursor.get_position();
+    // cursor.pos += 1;
+    
+    std::cout << "unparsed_uri: [" << request.unparsed_uri << "]\n";
+    std::cout << "uri_path: [" << request.uri_path << "]\n";
+    std::cout << "uri_query: [" << request.uri_query << "]\n";
+    cursor.skip_spaces();
+    std::cout << "char at HTTP: [" << requestLine[cursor.get_position()]  << "]\n";
+    if (requestLine.compare(cursor.get_position(), 8, "HTTP/1.1") != 0)
+        return PARSE_ERROR;
 
-    std::cout << "uri: [" << requestLine.substr(start_uri, uri_len) << "]\n";
-    return requestLine.substr(start_uri, uri_len);
+    
+    // char c = cursor.get_char();
+    // std::cout << "c : [" << c << "]\n";
+    // std::cout << "start_uri : [" << start_uri << "]\n";
+
+    // while (c != ' ')
+    // {
+    //     c = cursor.get_char();
+    // }
+    // size_t uri_len = cursor.get_position() - start_uri - 1;
+
+    // std::cout << "uri: [" << requestLine.substr(start_uri, uri_len) << "]\n";
+    // return requestLine.substr(start_schema, end_schema - start_schema);
+    return PARSE_IN_PROGRESS;
 };
 
 HTTP_Method HttpRequestParser::parseMethodChunk(std::string& requestLine, Cursor& cursor)
@@ -83,7 +142,8 @@ ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, Htt
     if (request.method == HTTP_UNKNOWN)
         return PARSE_ERROR;
     cursor.skip_spaces();
-    request.unparsed_uri = parseUriChunk(requestLine, cursor);
+    if (parseUriChunk(requestLine, cursor, request) == PARSE_ERROR)
+        return PARSE_ERROR;
     cursor.skip_spaces();
     return PARSE_DONE;
 
