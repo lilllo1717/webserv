@@ -56,7 +56,6 @@ const Token& Parser::compareWord(const std::string& word, const std::string& mes
     return token;
 }
 
-
 std::vector<std::string>	Parser::readArgumentsLine()
 {
 	std::vector<std::string>	arguments;
@@ -202,7 +201,6 @@ void	Parser::parseBodySizeDirective(serverConfig& sC)
 	sC.clientMaxBodySize = parseClientMaxBodySize(bodySize.value);
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
 }
-#include <algorithm>
 
 void	Parser::parseErrorPageDirective(serverConfig& sC)
 {
@@ -211,19 +209,6 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 	while (currentPosition().type == tokenType::TOKEN_WORD)
 	{
 		const std::string& value = currentPosition().value;
-
-		// if (_position + 1 < _tokens.size()
-		// 	&& _tokens[_position + 1].type == tokenType::TOKEN_SEMICOLON)
-		// 	break;
-
-		// try 
-		// {
-		// 	errorCodes.push_back(std::stoi(value));
-		// }
-		// catch(...)
-		// {
-		// 	throwError("Invalid error code");
-		// }
 
 		if (!(!value.empty() && std::all_of(value.begin(), value.end(), ::isdigit)))
 			break;
@@ -250,36 +235,18 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 	}
 	else if (name == "listen")
 	{
-		// if (!arguments.empty())
-		// 	sC.listen.push_back(arguments[0]);
-		// return;
 		parseListenDirective(sC);
 	}
 	else if (name == "server_name")
 	{
-		// if (!arguments.empty())
-		// 	sC.serverNames.push_back(arguments[0]);
-		// return;
 		parseServerNameDirective(sC);
 	}
 	else if (name == "client_max_body_size")
 	{
-		// if (!arguments.empty())
-		// 	sC.clientMaxBodySize = parseClientMaxBodySize(arguments[0]);
-		// return;
 		parseBodySizeDirective(sC);
 	}
 	else if (name == "error_page")
 	{
-		// if (arguments.size() >= 2)
-		// {
-		// 	const std::string& path = arguments.back();
-		// 	for (size_t i = 0; i + 1 < arguments.size(); i++)
-		// 	{
-		// 		int errorCode = std::stoi(arguments[i]);
-		// 		sC.errorPages[errorCode] = path;
-		// 	}
-		// }
 		parseErrorPageDirective(sC);
 	}
 	else

@@ -1,9 +1,10 @@
 #ifndef PARSER_HPP
 # define PARSER_HPP
 
-# include <vector>
-# include <string>
+# include <algorithm>
 # include <map>
+# include <string>
+# include <vector>
 
 # include "tokenizer.hpp"
 
