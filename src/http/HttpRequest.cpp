@@ -1,21 +1,45 @@
 #include "Http.hpp"
 
-// std::string HttpRequestParser::parseUriChunkPath(HttpRequest& request, Cursor& cursor)
-// {
+static bool is_hex(char c)
+{
+    return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+}
+// TODO: validate that the path does not go beyond the root
 
-// };
-// std::string HttpRequestParser::parseUriChunkQuery(HttpRequest& request, Cursor& cursor)
-// {
 
-// };
+
+ParseResult HttpRequestParser::validateUri(std::string &uri)
+{
+    // invalid:
+    //     ASCII < 32
+    //     ASCII = 127
+    //     space
+    //     NULL byte
+
+    //     % not followed by exactly 2 hex digits
+
+    for (size_t i; i < uri.size(); i++)
+    {
+        unsigned char c = static_cast<unsigned char>(uri[i]);
+
+        if (c == ' ')
+            return PARSE_ERROR;
+        if (c < 32 || c == 127)
+            return PARSE_ERROR;
+        if (!is_hex(uri[i+1]) || !is_hex(uri[i + 2]))
+            return PARSE_ERROR;
+    }
+    return PARSE_DONE;
+
+}
+
 
 ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request)
 {
     // size_t end_schema;
     
-    
     size_t start_pos = cursor.get_position();
-    size_t  end_uri = start_pos;
+    size_t end_uri = start_pos;
     size_t start_uri = start_pos;
     size_t start_query = start_pos;
     size_t end_query = start_pos;
@@ -38,8 +62,7 @@ ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& c
             cursor.pos++;
         start_uri = cursor.get_position();
         // std::cout << "end_schema : [" << requestLine.substr(start_uri, end_uri - start_uri) << "]\n";
-        // return requestLine.substr(start_schema, end_schema - start_schema);
-        
+        // return requestLine.substr(start_schema, end_schema - start_schema);  
     }
     else
         return PARSE_ERROR;
@@ -65,32 +88,23 @@ ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& c
         end_unparsed_uri = end_uri;
     request.unparsed_uri = requestLine.substr(start_schema, end_unparsed_uri - start_schema);
     request.uri_path = requestLine.substr(start_uri, end_uri - start_uri);
+    if (validateUri(request.uri_path) == PARSE_ERROR)
+        return PARSE_ERROR;
     request.uri_query = requestLine.substr(start_query, end_query - start_query);
+    if (validateUri(request.uri_query) == PARSE_ERROR)
+        return PARSE_ERROR;
     // end_schema = cursor.get_position();
     // cursor.pos += 1;
-    
+
     std::cout << "unparsed_uri: [" << request.unparsed_uri << "]\n";
     std::cout << "uri_path: [" << request.uri_path << "]\n";
     std::cout << "uri_query: [" << request.uri_query << "]\n";
     cursor.skip_spaces();
-    std::cout << "char at HTTP: [" << requestLine[cursor.get_position()]  << "]\n";
+    // std::cout << "char at HTTP: [" << requestLine[cursor.get_position()]  << "]\n";
     if (requestLine.compare(cursor.get_position(), 8, "HTTP/1.1") != 0)
         return PARSE_ERROR;
-
-    
-    // char c = cursor.get_char();
-    // std::cout << "c : [" << c << "]\n";
-    // std::cout << "start_uri : [" << start_uri << "]\n";
-
-    // while (c != ' ')
-    // {
-    //     c = cursor.get_char();
-    // }
-    // size_t uri_len = cursor.get_position() - start_uri - 1;
-
-    // std::cout << "uri: [" << requestLine.substr(start_uri, uri_len) << "]\n";
-    // return requestLine.substr(start_schema, end_schema - start_schema);
-    return PARSE_IN_PROGRESS;
+    // request.parseState = HEADERS;
+    return PARSE_DONE;
 };
 
 HTTP_Method HttpRequestParser::parseMethodChunk(std::string& requestLine, Cursor& cursor)
@@ -152,23 +166,58 @@ ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, Htt
 
 ParseResult HttpRequestParser::parseRequestLine(HttpRequest& request)
 {
-        auto pos = request.buffer.find("\r\n");
-        if (pos == std::string::npos)
-        {
-            return PARSE_IN_PROGRESS;
-            // break;
-        }
-        request.requestLine = request.buffer.substr(0, pos);
-        if (parseRawRequestLine(request.requestLine, request) == PARSE_ERROR)
-            return PARSE_ERROR;
-        request.buffer.erase(0, pos + 2);
-        return PARSE_DONE;
+    auto pos = request.buffer.find("\r\n");
+    if (pos == std::string::npos)
+    {
+        return PARSE_IN_PROGRESS;
+        // break;
+    }
+    request.requestLine = request.buffer.substr(0, pos);
+    if (parseRawRequestLine(request.requestLine, request) == PARSE_ERROR)
+        return PARSE_ERROR;
+    request.buffer.erase(0, pos + 2);
+    return PARSE_DONE;
 };
 
-// ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
-// {
+
+ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer ,HttpRequest& request)
+{
     
-// };
+    auto col_pos = buffer.find(':');
+    if (col_pos == std::string::npos)
+    {
+        return PARSE_ERROR;
+    }
+    std::string headers_key = buffer.substr(0, col_pos);
+    std::string headers_val = buffer.substr(col_pos + 1);
+
+    request.headers[headers_key] = headers_val;
+    std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";
+
+    return PARSE_DONE;
+}
+
+ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
+{
+    while (true)
+    {
+        auto pos = request.buffer.find("\r\n");
+        if (pos == std::string::npos)
+            return PARSE_IN_PROGRESS;
+        if (pos == 0)
+        {
+            request.buffer.erase(0, 2);
+            return PARSE_DONE;
+        }
+        std::string string_to_check = request.buffer.substr(0, pos);
+        std::cout << "parse header: string_to_check: " << string_to_check << "\n";
+
+        if (parseSingleHeader(string_to_check, request) == PARSE_ERROR)
+            return PARSE_ERROR;
+        request.buffer.erase(0, pos + 2);
+    }
+    return PARSE_DONE;
+};
 
 // ParseResult HttpRequestParser::parseBody(HttpRequest& request)
 // {
@@ -182,20 +231,29 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         if (request.parseState == REQ_LINE)
         {
             ParseResult parseRes = parseRequestLine(request);
-            return parseRes;
+            if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+            {
+                std::cout << "error after request line" << "\n";
+                return parseRes;
+            }
             // if (parseRes != PARSE_DONE)
             //     return parseRes;
-            // request.parseState = HEADERS;
-            // continue;
+            request.parseState = HEADERS;
+            continue;
 
         }
-        // else if (request.parseState == HEADERS)
-        // {
+        else if (request.parseState == HEADERS)
+        {
+            std::cout << "entered headers parsing" << "\n";
 
-        // }
+            ParseResult parseRes = parseHeader(request);
+            if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+                return parseRes;
+            return PARSE_DONE;
+        }
         // else if (request.parseState == BODY)
         // {
-
         // }
     }
+    return PARSE_DONE;
 };

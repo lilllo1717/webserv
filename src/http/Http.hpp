@@ -67,10 +67,10 @@ struct HttpRequest
     /*     Request-URI    = "*" | absoluteURI | abs_path | authority                    */
 
     std::string requestLine;
-    enum HTTP_Method method = HTTP_UNKNOWN;                          // GET POST DELETE
-    std::string unparsed_uri;                          // "/path%2F..../?a=1"
-    std::string uri_path;                        // parsed path
-    std::string uri_query;                       // part after '?'
+    enum HTTP_Method method = HTTP_UNKNOWN; // GET POST DELETE
+    std::string unparsed_uri;               // "/path%2F..../?a=1"
+    std::string uri_path;                   // parsed path
+    std::string uri_query;                  // part after '?'
 
     /*    --------   Headers  ---------   */
     std::string host;                           // "www.example.com"
@@ -91,16 +91,13 @@ struct HttpRequest
     /*    --------   Chunks  ---------   */
     std::size_t chunkRemainingSize = 0; // for chunked transfer encoding, size of the current chunk being processed
     enum ChunkState chunkState = CHUNK_SIZE;
-
-
-
 };
 
 struct HttpResponse
 {
     /*    --------  Status line  ---------   */ // HTTP/1.1 200 OK
-    int statusCode = 200;                            // 200, 404, etc.
-    
+    int statusCode = 200;                       // 200, 404, etc.
+
     /*    --------   Headers  ---------   */
     std::map<std::string, std::string> headers;
 
@@ -108,69 +105,68 @@ struct HttpResponse
     std::vector<uint8_t> body;
 
     bool closeConnection = false;
-
 };
 
 class HttpRequestParser
 {
-    public:
-        static ParseResult parse(HttpRequest& request);
+public:
+    static ParseResult parse(HttpRequest &request);
 
-        struct Cursor
+    struct Cursor
+    {
+        std::size_t pos;
+        std::string_view str_view;
+
+        Cursor(std::string_view str)
         {
-            std::size_t pos;
-            std::string_view str_view;
+            pos = 0;
+            str_view = str;
+        }
 
-            Cursor(std::string_view str)
-            {
-                pos = 0;
-                str_view = str;
-            }
+        bool check_eof() const
+        {
+            if (pos >= str_view.size())
+                return true;
+            return false;
+        }
 
-            bool check_eof() const
-            {
-                if (pos >= str_view.size())
-                    return true;
-                return false;
-            }
+        char peek_char() const
+        {
+            if (check_eof())
+                return '\0';
+            return str_view[pos];
+        }
 
-            char peek_char() const
-            {
-                if (check_eof())
-                    return '\0';
-                return str_view[pos];
-            }
+        char get_char()
+        {
+            if (check_eof())
+                return '\0';
+            char c = str_view[pos];
+            pos++;
+            return c;
+        }
 
-            char get_char()
-            {
-                if (check_eof())
-                    return '\0';
-                char c = str_view[pos];
+        void skip_spaces()
+        {
+            while (!check_eof() && str_view[pos] == ' ')
                 pos++;
-                return c;
-            }
+        }
 
-            void   skip_spaces()
-            {
-                while (!check_eof() && str_view[pos] == ' ')
-                    pos++;
-            }
+        std::size_t get_position()
+        {
+            return pos;
+        }
+    };
 
-            std::size_t get_position()
-            {
-                return pos;
-            } 
-        };
-
-    private:
-        static ParseResult parseRequestLine(HttpRequest& request);
-        static ParseResult parseRawRequestLine(std::string& requestLine, HttpRequest& request);
-        static ParseResult parseHeader(HttpRequest& request);
-        static ParseResult parseBody(HttpRequest& request);
-        static HTTP_Method parseMethodChunk(std::string& requestLine, Cursor& cursor);
-        static ParseResult parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request);
-        static std::string parseUriChunkPath(HttpRequest& request, Cursor& cursor);
-        static std::string parseUriChunkQuery(HttpRequest& request, Cursor& cursor);
+private:
+    static ParseResult parseRequestLine(HttpRequest &request);
+    static ParseResult parseRawRequestLine(std::string &requestLine, HttpRequest &request);
+    static ParseResult parseHeader(HttpRequest &request);
+    static ParseResult parseBody(HttpRequest &request);
+    static HTTP_Method parseMethodChunk(std::string &requestLine, Cursor &cursor);
+    static ParseResult parseUriChunk(std::string &requestLine, Cursor &cursor, HttpRequest &request);
+    static ParseResult validateUri(std::string &uri);
+    static ParseResult parseSingleHeader(std::string &buffer, HttpRequest& request);
 
 
 };
