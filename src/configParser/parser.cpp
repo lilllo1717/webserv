@@ -73,7 +73,7 @@ std::vector<std::string>	Parser::readArgumentsLine()
 	return arguments;
 }
 
-size_t	Parser::parseClientMaxBodySize(std::string& nb)
+size_t	Parser::parseClientMaxBodySize(const std::string& nb)
 {
 	if (nb.empty())
 		throw std::runtime_error("Empty input");
@@ -181,6 +181,37 @@ routeConfig	Parser::parseLocationBlock()
 }
 
 // Parsing of server block
+
+void	Parser::parseListenDirective(serverConfig& sC)
+{
+	const Token&	address = verifyToken(tokenType::TOKEN_WORD, "Expected address after 'listen' directive");
+	sC.listen.push_back(address.value);
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after listen value");
+}
+
+void	Parser::parseServerNameDirective(serverConfig& sC)
+{
+	const Token&	name = verifyToken(tokenType::TOKEN_WORD, "Expected server name after 'server_name' directive");
+	sC.serverNames.push_back(name.value);
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after server_name value");
+}
+
+void	Parser::parseBodySizeDirective(serverConfig& sC)
+{
+	const Token&	bodySize = verifyToken(tokenType::TOKEN_WORD, "Expected number size after 'client_max_body_size' directive");
+	sC.clientMaxBodySize = parseClientMaxBodySize(bodySize.value);
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
+}
+
+void	Parser::parseErrorPageDirective(serverConfig& sC)
+{
+	std::vector<int>	errorCodes;
+
+	
+	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected path after error code");
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after error_page values");
+}
+
 void	Parser::parseInsideServerBlock(serverConfig& sC)
 {
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected 'server' directive or 'location' directive");

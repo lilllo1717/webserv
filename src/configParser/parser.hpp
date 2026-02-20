@@ -65,7 +65,7 @@ class Parser
 		void	throwError(const std::string& message) const;
 
 		// parse client max body size based on suffixes (K, M, G)
-		size_t			parseClientMaxBodySize(std::string& nb);
+		size_t			parseClientMaxBodySize(const std::string& nb);
 
 		std::vector<std::string>	readArgumentsLine();
 
@@ -74,6 +74,10 @@ class Parser
 		routeConfig		parseLocationBlock();
 
 		// parse server block
+		void			parseListenDirective(serverConfig& sC);
+		void			parseServerNameDirective(serverConfig& sC);
+		void			parseBodySizeDirective(serverConfig& sC);
+		void			parseErrorPageDirective(serverConfig& sC);
 		void			parseInsideServerBlock(serverConfig& sC);
 		serverConfig	parseServerBlock();
 
