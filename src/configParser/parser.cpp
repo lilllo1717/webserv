@@ -122,38 +122,38 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 			rC.httpMethods = arguments;
 		return;
 	}
-	if (name == "root")
+	else if (name == "root")
 	{
 		if (!arguments.empty())
 			rC.rootDir = arguments[0];
 		return;
 	}
-	if (name == "index")
+	else if (name == "index")
 	{
 		if (!arguments.empty())
 			rC.defaultFile = arguments[0];
 		return;
 	}
-	if (name == "autoindex")
+	else if (name == "autoindex")
 	{
 		if (!arguments.empty())
 			rC.autoindex = (arguments[0] == "on");
 		return;
 	}
-	if (name == "upload_store")
+	else if (name == "upload_store")
 	{
 		rC.allow_upload = true;
 		if (!arguments.empty())
 			rC.uploadPath = arguments[0];
 		return;
 	}
-	if (name == "cgi")
+	else if (name == "cgi")
 	{
 		if (arguments.size() >= 2)
 			rC.cgi[arguments[0]] = arguments[1];
 		return;
 	}
-	if (name == "return")
+	else if (name == "return")
 	{
 		if (arguments.size() >= 2)
 		{
@@ -225,7 +225,7 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 
 void	Parser::parseInsideServerBlock(serverConfig& sC)
 {
-	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected 'server' directive or 'location' directive");
+	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected 'server' directive");
 	const std::string& name = token.value;
 
 	if (name == "location")
