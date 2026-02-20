@@ -202,14 +202,40 @@ void	Parser::parseBodySizeDirective(serverConfig& sC)
 	sC.clientMaxBodySize = parseClientMaxBodySize(bodySize.value);
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
 }
+#include <algorithm>
 
 void	Parser::parseErrorPageDirective(serverConfig& sC)
 {
 	std::vector<int>	errorCodes;
 
-	
+	while (currentPosition().type == tokenType::TOKEN_WORD)
+	{
+		const std::string& value = currentPosition().value;
+
+		// if (_position + 1 < _tokens.size()
+		// 	&& _tokens[_position + 1].type == tokenType::TOKEN_SEMICOLON)
+		// 	break;
+
+		// try 
+		// {
+		// 	errorCodes.push_back(std::stoi(value));
+		// }
+		// catch(...)
+		// {
+		// 	throwError("Invalid error code");
+		// }
+
+		if (!(!value.empty() && std::all_of(value.begin(), value.end(), ::isdigit)))
+			break;
+		int code = std::stoi(value);
+		errorCodes.push_back(code);
+
+		moveForward();
+	}
 	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected path after error code");
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after error_page values");
+	for (size_t i = 0; i < errorCodes.size(); i++)
+		sC.errorPages[errorCodes[i]] = path.value;
 }
 
 void	Parser::parseInsideServerBlock(serverConfig& sC)
@@ -222,38 +248,43 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 		sC.routes.push_back(parseLocationBlock());
 		return;
 	}
-
-	std::vector<std::string>	arguments = readArgumentsLine();
-
-	if (name == "listen")
+	else if (name == "listen")
 	{
-		if (!arguments.empty())
-			sC.listen.push_back(arguments[0]);
-		return;
+		// if (!arguments.empty())
+		// 	sC.listen.push_back(arguments[0]);
+		// return;
+		parseListenDirective(sC);
 	}
-	if (name == "server_name")
+	else if (name == "server_name")
 	{
-		if (!arguments.empty())
-			sC.serverNames.push_back(arguments[0]);
-		return;
+		// if (!arguments.empty())
+		// 	sC.serverNames.push_back(arguments[0]);
+		// return;
+		parseServerNameDirective(sC);
 	}
-	if (name == "client_max_body_size")
+	else if (name == "client_max_body_size")
 	{
-		if (!arguments.empty())
-			sC.clientMaxBodySize = parseClientMaxBodySize(arguments[0]);
-		return;
+		// if (!arguments.empty())
+		// 	sC.clientMaxBodySize = parseClientMaxBodySize(arguments[0]);
+		// return;
+		parseBodySizeDirective(sC);
 	}
-	if (name == "error_page")
+	else if (name == "error_page")
 	{
-		if (arguments.size() >= 2)
-		{
-			const std::string& path = arguments.back();
-			for (size_t i = 0; i + 1 < arguments.size(); i++)
-			{
-				int errorCode = std::stoi(arguments[i]);
-				sC.errorPages[errorCode] = path;
-			}
-		}
+		// if (arguments.size() >= 2)
+		// {
+		// 	const std::string& path = arguments.back();
+		// 	for (size_t i = 0; i + 1 < arguments.size(); i++)
+		// 	{
+		// 		int errorCode = std::stoi(arguments[i]);
+		// 		sC.errorPages[errorCode] = path;
+		// 	}
+		// }
+		parseErrorPageDirective(sC);
+	}
+	else
+	{
+		throwError("Unknown directive specified");
 	}
 }
 
