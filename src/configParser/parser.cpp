@@ -202,19 +202,18 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 {
 	rC.isRedirect = true;
 
-	std::vector<int>	errorCodes;
-
-	while (currentPosition().type == tokenType::TOKEN_WORD)
+	if (currentPosition().type != tokenType::TOKEN_WORD || currentPosition().value.empty()
+		|| !std::all_of(currentPosition().value.begin(), currentPosition().value.end(), ::isdigit))
 	{
-		const std::string& value = currentPosition().value;
-
-		if (!(!value.empty() && std::all_of(value.begin(), value.end(), ::isdigit)))
-			break;
-		int code = std::stoi(value);
-		rC.redirectCode = code;
-		moveForward();
+		throwError("There should be a return code after 'return' directive");
 	}
-	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected path after error code");
+
+	const std::string& value = currentPosition().value;
+	int code = std::stoi(value);
+	rC.redirectCode = code;
+	moveForward();
+	
+	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected redirect targer after error code");
 	rC.redirectTarget = path.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after return value");
 }
