@@ -1,5 +1,6 @@
 #include "Http.hpp"
-static void trimHeaders(std::string& header)
+
+void trim(std::string& header)
 {
     size_t start = 0;
     size_t end = header.size();
@@ -29,7 +30,7 @@ ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer, HttpReques
     }
     std::string headers_key = buffer.substr(0, col_pos);
     std::string headers_val = buffer.substr(col_pos + 1);
-    trimHeaders(headers_key);
+    trim(headers_key);
     lowerLettersInHeaders(headers_key);
     request.headers[headers_key] = headers_val;
     std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";

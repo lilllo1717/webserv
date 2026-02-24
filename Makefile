@@ -9,6 +9,7 @@ SRCS            = src/main.cpp \
 				  src/manager/Manager.cpp \
 				  src/Listeners.cpp \
 				  src/http/ParseHeaders.cpp \
+				  src/http/ParseBody.cpp \
 				  src/http/ParseRequestLine.cpp \
 				  src/http/HttpRequest.cpp
 

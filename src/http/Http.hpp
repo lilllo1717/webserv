@@ -15,12 +15,14 @@
 #include <string_view>
 #include <cctype>
 #include <algorithm>
+#include <charconv>
 
 enum BodyType
 {
     NONE,
     CHUNKED,
-    CONTENT_LENGTH
+    CONTENT_LENGTH,
+    UNSUPPORTED
 };
 
 enum ChunkState
@@ -164,14 +166,17 @@ private:
     static ParseResult parseRequestLine(HttpRequest &request);
     static ParseResult parseRawRequestLine(std::string &requestLine, HttpRequest &request);
     static ParseResult parseHeader(HttpRequest &request);
-    static ParseResult parseBody(HttpRequest &request);
     static HTTP_Method parseMethodChunk(std::string &requestLine, Cursor &cursor);
     static ParseResult parseUriChunk(std::string &requestLine, Cursor &cursor, HttpRequest &request);
     static ParseResult validateUri(std::string &uri);
     static ParseResult parseSingleHeader(std::string &buffer, HttpRequest& request);
+    static ParseResult parseBody(HttpRequest& request);
+
 
 
 };
 
+
+void trim(std::string& header);
 
 #endif

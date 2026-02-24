@@ -168,10 +168,12 @@ ParseResult HttpRequestParser::parseRequestLine(HttpRequest& request)
     auto pos = request.buffer.find("\r\n");
     if (pos == std::string::npos)
     {
+        std::cout << "no rn" << "\n";
         return PARSE_IN_PROGRESS;
         // break;
     }
     request.requestLine = request.buffer.substr(0, pos);
+    std::cout << "request.requestLine: [" << request.requestLine << "]\n";
     if (parseRawRequestLine(request.requestLine, request) == PARSE_ERROR)
         return PARSE_ERROR;
     request.buffer.erase(0, pos + 2);
