@@ -198,12 +198,31 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 		rC.cgi[fileExtensions[i]] = filePath.value;
 }
 
+void	Parser::parseReturnDirective(routeConfig& rC)
+{
+	rC.isRedirect = true;
+
+	std::vector<int>	errorCodes;
+
+	while (currentPosition().type == tokenType::TOKEN_WORD)
+	{
+		const std::string& value = currentPosition().value;
+
+		if (!(!value.empty() && std::all_of(value.begin(), value.end(), ::isdigit)))
+			break;
+		int code = std::stoi(value);
+		rC.redirectCode = code;
+		moveForward();
+	}
+	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected path after error code");
+	rC.redirectTarget = path.value;
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after return value");
+}
+
 void	Parser::parseInsideLocationBlock(routeConfig& rC)
 {
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected directive in location");
 	const std::string&	name = token.value;
-
-	// std::vector<std::string> arguments = readArgumentsLine();
 
 	if (name == "methods")
 	{
@@ -229,15 +248,10 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 	{
 		return parseCGIDirective(rC);
 	}
-	// else if (name == "return")
-	// {
-	// 	if (arguments.size() >= 2)
-	// 	{
-	// 		rC.isRedirect = true;
-	// 		rC.redirectCode = std::stoi(arguments[0]);
-	// 		rC.redirectTarget = arguments[1];
-	// 	}
-	// }
+	else if (name == "return")
+	{
+		return parseReturnDirective(rC);
+	}
 }
 
 routeConfig	Parser::parseLocationBlock()
