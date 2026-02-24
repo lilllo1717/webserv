@@ -71,6 +71,14 @@ class Parser
 		std::vector<std::string>	readArgumentsLine();
 
 		// parse location block inside server block
+		void			parseMethodsDirective(routeConfig& rC);
+		void			parseRootDirective(routeConfig& rC);
+		void			parseIndexDirective(routeConfig& rC);
+		void			parseAutoindexDirective(routeConfig& rC);
+		void			parseUploadStoreDirective(routeConfig& rC);
+		void			parseCGIDirective(routeConfig& rC);
+		void			parseReturnDirective(routeConfig& rC);
+		
 		void			parseInsideLocationBlock(routeConfig& rC);
 		routeConfig		parseLocationBlock();
 
@@ -79,6 +87,7 @@ class Parser
 		void			parseServerNameDirective(serverConfig& sC);
 		void			parseBodySizeDirective(serverConfig& sC);
 		void			parseErrorPageDirective(serverConfig& sC);
+
 		void			parseInsideServerBlock(serverConfig& sC);
 		serverConfig	parseServerBlock();
 

@@ -109,6 +109,50 @@ size_t	Parser::parseClientMaxBodySize(const std::string& nb)
 }
 
 // Parsing of location block (starting from the inside out)
+
+// void	Parser::parseMethodsDirective(routeConfig& rC)
+// {
+// 	const Token&	methods
+// 	rC.httpMethods.push_back(methods.value);
+// 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after methods value");
+// }
+
+void	Parser::parseRootDirective(routeConfig& rC)
+{
+	const Token&	root = verifyToken(tokenType::TOKEN_WORD, "Expected route path after 'root' directive");
+	rC.rootDir = root.value;
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after root value");
+}
+
+void	Parser::parseIndexDirective(routeConfig& rC)
+{
+	const Token&	index = verifyToken(tokenType::TOKEN_WORD, "Expected index value after 'index' directive");
+	rC.defaultFile = index.value;
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after index value");
+}
+
+void	Parser::parseAutoindexDirective(routeConfig& rC)
+{
+	const Token&	autoindex = verifyToken(tokenType::TOKEN_WORD, "Expected autoindex value after 'autoindex' directive");
+
+	if (autoindex.value == "on")
+		rC.autoindex = true;
+	else if (autoindex. value == "off")
+		rC.autoindex = false;
+	else
+		throwError("Invalid autoindex value");
+	
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after autoindex value");
+}
+
+void	Parser::parseUploadStoreDirective(routeConfig& rC)
+{
+	rC.allow_upload = true;
+	const Token&	upload_store = verifyToken(tokenType::TOKEN_WORD, "Expected upload path after 'upload_store' directive");
+	rC.uploadPath = upload_store.value;
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after upload_store value");
+}
+
 void	Parser::parseInsideLocationBlock(routeConfig& rC)
 {
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected directive in location");
