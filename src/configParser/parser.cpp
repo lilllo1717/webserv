@@ -116,16 +116,21 @@ static bool	isValidMethod(const std::string& method)
 }
 void	Parser::parseMethodsDirective(routeConfig& rC)
 {
-	while (currentPosition().type == tokenType::TOKEN_WORD)
+	if (currentPosition().type != tokenType::TOKEN_WORD)
+		throwError("There should be at least one HTTP method after 'methods'");
+
+	bool	parsedAtLeastOne = false;
+
+	while (currentPosition().type == tokenType::TOKEN_WORD && isValidMethod(currentPosition().value))
 	{
 		const std::string&	value = currentPosition().value;
-		if (!isValidMethod(value))
-			throwError("Invalid methods: only 'GET', 'POST', 'DELETE' are allowed");
 		rC.httpMethods.push_back(value);
 		moveForward();
+		parsedAtLeastOne = true;
 	}
-	// const Token&	methods
-	// rC.httpMethods.push_back(methods.value);
+	if (!parsedAtLeastOne)
+			throwError("Invalid methods: only 'GET', 'POST', 'DELETE' are allowed");
+			
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after methods value");
 }
 
@@ -178,12 +183,15 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 	{
 		const std::string&	value = currentPosition().value;
 
-		if (!(!value.empty() && std::all_of(value.begin(), value.end(), isValidFileExtenstion(value))))
+		// if (!(!value.empty() && std::all_of(value.begin(), value.end(), isValidFileExtenstion(value))))
+		// 	break;
+		if (!isValidFileExtenstion(value))
 			break;
 		fileExtensions.push_back(value);
-
 		moveForward();
 	}
+	if (fileExtensions.empty())
+		throwError("There should be at least one valid file extension after 'cgi' directive");
 	const Token&	filePath = verifyToken(tokenType::TOKEN_WORD, "Expected file path after file extenstion");
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
 	for (size_t i = 0; i < fileExtensions.size(); i++)
@@ -195,54 +203,41 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected directive in location");
 	const std::string&	name = token.value;
 
-	std::vector<std::string> arguments = readArgumentsLine();
+	// std::vector<std::string> arguments = readArgumentsLine();
 
 	if (name == "methods")
 	{
-		if (!arguments.empty())
-			rC.httpMethods = arguments;
-		return;
+		return parseMethodsDirective(rC);
 	}
 	else if (name == "root")
 	{
-		if (!arguments.empty())
-			rC.rootDir = arguments[0];
-		return;
+		return parseRootDirective(rC);
 	}
 	else if (name == "index")
 	{
-		if (!arguments.empty())
-			rC.defaultFile = arguments[0];
-		return;
+		return parseIndexDirective(rC);
 	}
 	else if (name == "autoindex")
 	{
-		if (!arguments.empty())
-			rC.autoindex = (arguments[0] == "on");
-		return;
+		 return parseAutoindexDirective(rC);
 	}
 	else if (name == "upload_store")
 	{
-		rC.allow_upload = true;
-		if (!arguments.empty())
-			rC.uploadPath = arguments[0];
-		return;
+		return parseUploadStoreDirective(rC);
 	}
 	else if (name == "cgi")
 	{
-		if (arguments.size() >= 2)
-			rC.cgi[arguments[0]] = arguments[1];
-		return;
+		return parseCGIDirective(rC);
 	}
-	else if (name == "return")
-	{
-		if (arguments.size() >= 2)
-		{
-			rC.isRedirect = true;
-			rC.redirectCode = std::stoi(arguments[0]);
-			rC.redirectTarget = arguments[1];
-		}
-	}
+	// else if (name == "return")
+	// {
+	// 	if (arguments.size() >= 2)
+	// 	{
+	// 		rC.isRedirect = true;
+	// 		rC.redirectCode = std::stoi(arguments[0]);
+	// 		rC.redirectTarget = arguments[1];
+	// 	}
+	// }
 }
 
 routeConfig	Parser::parseLocationBlock()
