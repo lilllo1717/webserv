@@ -78,7 +78,7 @@ class Parser
 		void			parseUploadStoreDirective(routeConfig& rC);
 		void			parseCGIDirective(routeConfig& rC);
 		void			parseReturnDirective(routeConfig& rC);
-		
+
 		void			parseInsideLocationBlock(routeConfig& rC);
 		routeConfig		parseLocationBlock();
 

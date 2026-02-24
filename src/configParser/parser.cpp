@@ -110,12 +110,24 @@ size_t	Parser::parseClientMaxBodySize(const std::string& nb)
 
 // Parsing of location block (starting from the inside out)
 
-// void	Parser::parseMethodsDirective(routeConfig& rC)
-// {
-// 	const Token&	methods
-// 	rC.httpMethods.push_back(methods.value);
-// 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after methods value");
-// }
+static bool	isValidMethod(const std::string& method)
+{
+	return (method == "GET" || method == "POST" || method == "DELETE");
+}
+void	Parser::parseMethodsDirective(routeConfig& rC)
+{
+	while (currentPosition().type == tokenType::TOKEN_WORD)
+	{
+		const std::string&	value = currentPosition().value;
+		if (!isValidMethod(value))
+			throwError("Invalid methods: only 'GET', 'POST', 'DELETE' are allowed");
+		rC.httpMethods.push_back(value);
+		moveForward();
+	}
+	// const Token&	methods
+	// rC.httpMethods.push_back(methods.value);
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after methods value");
+}
 
 void	Parser::parseRootDirective(routeConfig& rC)
 {
@@ -151,6 +163,31 @@ void	Parser::parseUploadStoreDirective(routeConfig& rC)
 	const Token&	upload_store = verifyToken(tokenType::TOKEN_WORD, "Expected upload path after 'upload_store' directive");
 	rC.uploadPath = upload_store.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after upload_store value");
+}
+
+static bool	isValidFileExtenstion(const std::string& file)
+{
+	return (file == ".php" || file == ".py" || file == ".pl" || file == ".c" || file == ".cpp");
+}
+
+void	Parser::parseCGIDirective(routeConfig& rC)
+{
+	std::vector<std::string>	fileExtensions;
+
+	while (currentPosition().type == tokenType::TOKEN_WORD)
+	{
+		const std::string&	value = currentPosition().value;
+
+		if (!(!value.empty() && std::all_of(value.begin(), value.end(), isValidFileExtenstion(value))))
+			break;
+		fileExtensions.push_back(value);
+
+		moveForward();
+	}
+	const Token&	filePath = verifyToken(tokenType::TOKEN_WORD, "Expected file path after file extenstion");
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
+	for (size_t i = 0; i < fileExtensions.size(); i++)
+		rC.cgi[fileExtensions[i]] = filePath.value;
 }
 
 void	Parser::parseInsideLocationBlock(routeConfig& rC)
