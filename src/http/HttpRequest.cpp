@@ -47,7 +47,10 @@ static BodyType establishBodyType(HttpRequest& request)
             }
         }
         if (has_chunk == true)
+        {
+            request.bodyType = CHUNKED;
             return CHUNKED;
+        }
         else
             return UNSUPPORTED;
     }
@@ -56,12 +59,17 @@ static BodyType establishBodyType(HttpRequest& request)
     {
         int res_value = 0;
         std::string& num_str = it2->second;
+        std::cout << " num_str: [" <<  num_str << "]\n";
         auto res = std::from_chars(num_str.data(), num_str.data() + num_str.size(), res_value);
-        if (res.ec == std::errc() || res.ptr !=  num_str.data() + num_str.size() || res_value < 0)
+        if (res.ec != std::errc() || res.ptr !=  num_str.data() + num_str.size() || res_value < 0)
+        {
+            // std::cout << "error here" << "\n";
             return UNSUPPORTED;
+        }
         request.contentLength = res_value;
         std::cout << "Content-Length: " << request.headers["content-length"] << "\n";
         request.parseState = BODY;
+        request.bodyType = CONTENT_LENGTH;
         return CONTENT_LENGTH;
     }
     return NONE;
@@ -94,7 +102,9 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             ParseResult parseRes = parseHeader(request);
             if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
                 return parseRes;
+            std::cout << "parsed header" << "\n";
             BodyType typeRes = establishBodyType(request);
+            std::cout << "BodyType: " << typeRes << "\n";
             if (typeRes == NONE)
                 return PARSE_DONE;
             else if (typeRes == UNSUPPORTED)
@@ -105,7 +115,14 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         }
         else if (request.parseState == BODY)
         {
+            // if (request.bodyType == CHUNKED)
+            //     parseChunkedBody(request);
+
             std::cout << "entered body parsing" << "\n";
+            ParseResult parseRes = parseBody(request);
+            if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+                return parseRes;
+            return PARSE_DONE;
 
         }
     }

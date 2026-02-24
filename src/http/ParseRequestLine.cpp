@@ -152,7 +152,7 @@ ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, Htt
     // std::string methodChunk = requestLine.substr(0, pos);
     cursor.skip_spaces();
     request.method = parseMethodChunk(requestLine, cursor);
-    std::cout << "request method: " << request.method << "\n";
+    // std::cout << "request method: " << request.method << "\n";
     if (request.method == HTTP_UNKNOWN)
         return PARSE_ERROR;
     cursor.skip_spaces();
@@ -173,7 +173,7 @@ ParseResult HttpRequestParser::parseRequestLine(HttpRequest& request)
         // break;
     }
     request.requestLine = request.buffer.substr(0, pos);
-    std::cout << "request.requestLine: [" << request.requestLine << "]\n";
+    // std::cout << "request.requestLine: [" << request.requestLine << "]\n";
     if (parseRawRequestLine(request.requestLine, request) == PARSE_ERROR)
         return PARSE_ERROR;
     request.buffer.erase(0, pos + 2);

@@ -1,19 +1,24 @@
 #include "Http.hpp"
 
-void trim(std::string& header)
+
+void trim(std::string& s)
 {
     size_t start = 0;
-    size_t end = header.size();
-
-    while (start < header.size() && (header[start] == ' ' || header[start] == '\t'))
+    while (start < s.size() && (s[start] == ' ' || s[start] == '\t'))
         start++;
-    while (end > start && (header[end - 1] == ' ' || header[end - 1] == '\t'))
+
+    if (start == s.size()) 
+    {
+        s.clear();
+        return;
+    }
+
+    size_t end = s.size();
+    while (end > start && (s[end - 1] == ' ' || s[end - 1] == '\t'))
         end--;
 
-    header.erase(0, start);
-    header.erase(end);
+    s = s.substr(start, end - start);
 }
-
 
 static void lowerLettersInHeaders(std::string& header)
 {
@@ -28,12 +33,14 @@ ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer, HttpReques
     {
         return PARSE_ERROR;
     }
+    // buffer.erase(0, col_pos + 1);
     std::string headers_key = buffer.substr(0, col_pos);
     std::string headers_val = buffer.substr(col_pos + 1);
     trim(headers_key);
+    trim(headers_val);
     lowerLettersInHeaders(headers_key);
     request.headers[headers_key] = headers_val;
-    std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";
+    // std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";
 
     return PARSE_DONE;
 }
@@ -51,10 +58,11 @@ ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
             return PARSE_DONE;
         }
         std::string string_to_check = request.buffer.substr(0, pos);
-        std::cout << "parse header: string_to_check: " << string_to_check << "\n";
-
+        std::cout << "string_to_check: " << string_to_check << "\n";
+        
         if (parseSingleHeader(string_to_check, request) == PARSE_ERROR)
             return PARSE_ERROR;
+        // std::cout << "buffer: [" << request.buffer << "]\n";
         request.buffer.erase(0, pos + 2);
     }
     return PARSE_DONE;
