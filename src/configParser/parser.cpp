@@ -56,23 +56,7 @@ const Token& Parser::compareWord(const std::string& word, const std::string& mes
     return token;
 }
 
-std::vector<std::string>	Parser::readArgumentsLine()
-{
-	std::vector<std::string>	arguments;
-
-	while (!checkifEOF() && currentPosition().type != tokenType::TOKEN_SEMICOLON)
-	{
-		if (currentPosition().type == tokenType::TOKEN_LBRACE
-			|| currentPosition().type == tokenType::TOKEN_RBRACE)
-			throwError("Unexpected brace in arguments line");
-		const Token&	tok = verifyToken(tokenType::TOKEN_WORD, "Expected argument");
-		arguments.push_back(tok.value);
-	}
-	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after directive");
-	return arguments;
-}
-
-size_t	Parser::parseClientMaxBodySize(const std::string& nb)
+size_t	Parser::convertClientMaxBodySize(const std::string& nb)
 {
 	if (nb.empty())
 		throw std::runtime_error("Empty input");
@@ -154,7 +138,7 @@ void	Parser::parseAutoindexDirective(routeConfig& rC)
 
 	if (autoindex.value == "on")
 		rC.autoindex = true;
-	else if (autoindex. value == "off")
+	else if (autoindex.value == "off")
 		rC.autoindex = false;
 	else
 		throwError("Invalid autoindex value");
@@ -175,6 +159,7 @@ static bool	isValidFileExtenstion(const std::string& file)
 	return (file == ".php" || file == ".py" || file == ".pl" || file == ".c" || file == ".cpp");
 }
 
+// TODO: rewrite function to accomodate only one pair of CGI directive
 void	Parser::parseCGIDirective(routeConfig& rC)
 {
 	std::vector<std::string>	fileExtensions;
@@ -198,6 +183,7 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 		rC.cgi[fileExtensions[i]] = filePath.value;
 }
 
+// TODO: add relevant error message for multiple return codes
 void	Parser::parseReturnDirective(routeConfig& rC)
 {
 	rC.isRedirect = true;
@@ -213,8 +199,8 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 	rC.redirectCode = code;
 	moveForward();
 	
-	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected redirect targer after error code");
-	rC.redirectTarget = path.value;
+	const Token&	redirectPath = verifyToken(tokenType::TOKEN_WORD, "Expected redirect target after error code");
+	rC.redirectTarget = redirectPath.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after return value");
 }
 
@@ -287,10 +273,11 @@ void	Parser::parseServerNameDirective(serverConfig& sC)
 void	Parser::parseBodySizeDirective(serverConfig& sC)
 {
 	const Token&	bodySize = verifyToken(tokenType::TOKEN_WORD, "Expected number size after 'client_max_body_size' directive");
-	sC.clientMaxBodySize = parseClientMaxBodySize(bodySize.value);
+	sC.clientMaxBodySize = convertClientMaxBodySize(bodySize.value);
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
 }
 
+// TODO: still needs further testing and fix issues accordingly
 void	Parser::parseErrorPageDirective(serverConfig& sC)
 {
 	std::vector<int>	errorCodes;

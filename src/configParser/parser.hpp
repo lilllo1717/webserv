@@ -22,14 +22,10 @@ struct routeConfig
 	int							redirectCode = 0;
 	std::string					redirectTarget;
 
-
 	bool						allow_upload = true; // turns on and off the upload feature
 	std::string					uploadPath; // where to store uploaded files
 
-	// std::string					cgiExt;	// ".php" in our case
-	// std::string					cgiPath;	// ".php" file path
-
-	std::map<std::string, std::string>	cgi; // replaces the two data members above
+	std::map<std::string, std::string>	cgi;
 };
 
 // Apply to the whole virtual host/website
@@ -66,9 +62,7 @@ class Parser
 		void	throwError(const std::string& message) const;
 
 		// parse client max body size based on suffixes (K, M, G)
-		size_t			parseClientMaxBodySize(const std::string& nb);
-
-		std::vector<std::string>	readArgumentsLine();
+		size_t			convertClientMaxBodySize(const std::string& nb);
 
 		// parse location block inside server block
 		void			parseMethodsDirective(routeConfig& rC);
