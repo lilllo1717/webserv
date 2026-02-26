@@ -105,7 +105,8 @@ void	Parser::parseMethodsDirective(routeConfig& rC)
 
 	bool	parsedAtLeastOne = false;
 
-	while (currentPosition().type == tokenType::TOKEN_WORD && isValidMethod(currentPosition().value))
+	while (currentPosition().type == tokenType::TOKEN_WORD
+		&& isValidMethod(currentPosition().value))
 	{
 		const std::string&	value = currentPosition().value;
 		rC.httpMethods.push_back(value);
@@ -208,7 +209,6 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 	rC.redirectCode = code;
 	moveForward();
 
-	
 	const Token&	redirectPath = verifyToken(tokenType::TOKEN_WORD, "Expected redirect target after error code");
 	rC.redirectTarget = redirectPath.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after return value");
@@ -287,7 +287,6 @@ void	Parser::parseBodySizeDirective(serverConfig& sC)
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
 }
 
-// TODO: still needs further testing and fix issues accordingly
 void	Parser::parseErrorPageDirective(serverConfig& sC)
 {
 	std::vector<int>	errorCodes;
@@ -296,13 +295,17 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 	{
 		const std::string& value = currentPosition().value;
 
-		if (!(!value.empty() && std::all_of(value.begin(), value.end(), ::isdigit)))
+		if (value.empty() || !std::all_of(value.begin(), value.end(), ::isdigit))
 			break;
 		int code = std::stoi(value);
 		errorCodes.push_back(code);
 
 		moveForward();
 	}
+
+	if (errorCodes.empty())
+		throwError("There should be at least one error code");
+
 	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected path after error code");
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after error_page values");
 	for (size_t i = 0; i < errorCodes.size(); i++)
