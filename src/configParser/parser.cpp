@@ -156,31 +156,40 @@ void	Parser::parseUploadStoreDirective(routeConfig& rC)
 
 static bool	isValidFileExtenstion(const std::string& file)
 {
-	return (file == ".php" || file == ".py" || file == ".pl" || file == ".c" || file == ".cpp");
+	if (file.empty() || file[0] != '.')
+		return false;
+	
+	if (file.size() == 1)
+		return false;
+
+	for (size_t i = 1; i < file.size(); i++)
+	{
+		if (!std::isalnum(static_cast<unsigned char>(file[i])))
+			return false;
+	}
+	return true;
 }
 
-// TODO: rewrite function to accomodate only one pair of CGI directive
 void	Parser::parseCGIDirective(routeConfig& rC)
 {
-	std::vector<std::string>	fileExtensions;
+	if (currentPosition().type != tokenType::TOKEN_WORD)
+		throwError("There should be a CGI extension after 'cgi' directive");
 
-	while (currentPosition().type == tokenType::TOKEN_WORD)
-	{
-		const std::string&	value = currentPosition().value;
+	std::string	extension = currentPosition().value;
 
-		// if (!(!value.empty() && std::all_of(value.begin(), value.end(), isValidFileExtenstion(value))))
-		// 	break;
-		if (!isValidFileExtenstion(value))
-			break;
-		fileExtensions.push_back(value);
-		moveForward();
-	}
-	if (fileExtensions.empty())
-		throwError("There should be at least one valid file extension after 'cgi' directive");
-	const Token&	filePath = verifyToken(tokenType::TOKEN_WORD, "Expected file path after file extenstion");
+	if (!isValidFileExtenstion(extension))
+    	throwError("Invalid CGI extension format (must start with '.')");
+
+	moveForward();
+
+	if (currentPosition().type != tokenType::TOKEN_WORD)
+		throwError("There should be a CGI path after extension");
+
+	std::string executable = currentPosition().value;
+	moveForward();
+
+	rC.cgi[extension] = executable;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
-	for (size_t i = 0; i < fileExtensions.size(); i++)
-		rC.cgi[fileExtensions[i]] = filePath.value;
 }
 
 // TODO: add relevant error message for multiple return codes
@@ -198,6 +207,7 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 	int code = std::stoi(value);
 	rC.redirectCode = code;
 	moveForward();
+
 	
 	const Token&	redirectPath = verifyToken(tokenType::TOKEN_WORD, "Expected redirect target after error code");
 	rC.redirectTarget = redirectPath.value;
