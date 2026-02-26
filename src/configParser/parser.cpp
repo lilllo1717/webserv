@@ -193,7 +193,6 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
 }
 
-// TODO: add relevant error message for multiple return codes
 void	Parser::parseReturnDirective(routeConfig& rC)
 {
 	rC.isRedirect = true;
@@ -247,6 +246,10 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 	{
 		return parseReturnDirective(rC);
 	}
+	else
+	{
+		throwError("Unknown directive in location block: " + name);
+	}
 }
 
 routeConfig	Parser::parseLocationBlock()
@@ -275,15 +278,32 @@ void	Parser::parseListenDirective(serverConfig& sC)
 
 void	Parser::parseServerNameDirective(serverConfig& sC)
 {
-	const Token&	name = verifyToken(tokenType::TOKEN_WORD, "Expected server name after 'server_name' directive");
-	sC.serverNames.push_back(name.value);
+	bool	parsedAtLeastOne = false;
+
+	while (currentPosition().type == tokenType::TOKEN_WORD)
+	{
+		sC.serverNames.push_back(currentPosition().value);
+		moveForward();
+		parsedAtLeastOne = true;
+	}
+	if (!parsedAtLeastOne)
+		throwError("There should be at least one server name");
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after server_name value");
 }
 
 void	Parser::parseBodySizeDirective(serverConfig& sC)
 {
 	const Token&	bodySize = verifyToken(tokenType::TOKEN_WORD, "Expected number size after 'client_max_body_size' directive");
-	sC.clientMaxBodySize = convertClientMaxBodySize(bodySize.value);
+	
+	try
+	{
+		sC.clientMaxBodySize = convertClientMaxBodySize(bodySize.value);
+	}
+	catch(const std::exception& e)
+	{
+		throwError("Invalid client_max_body_size value");
+	}
+	
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
 }
 
@@ -314,7 +334,7 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 
 void	Parser::parseInsideServerBlock(serverConfig& sC)
 {
-	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected 'server' directive");
+	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected directive inside server block");
 	const std::string& name = token.value;
 
 	if (name == "location")
@@ -340,7 +360,7 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 	}
 	else
 	{
-		throwError("Unknown directive specified");
+		throwError("Unknown directive inside server block: " + name);
 	}
 }
 
