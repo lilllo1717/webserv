@@ -98,6 +98,7 @@ static bool	isValidMethod(const std::string& method)
 {
 	return (method == "GET" || method == "POST" || method == "DELETE");
 }
+
 void	Parser::parseMethodsDirective(routeConfig& rC)
 {
 	if (currentPosition().type != tokenType::TOKEN_WORD)
@@ -253,9 +254,47 @@ routeConfig	Parser::parseLocationBlock()
 
 // Parsing of server block
 
+void	Parser::isValidPort(int port)
+{
+	if (port < 1 || port > 65535)
+		throwError("Port must be in between 1 and 65535");
+}
+
+static bool	isNumber(const std::string& nb)
+{
+	return (!nb.empty() && std::all_of(nb.begin(), nb.end(), ::isdigit));
+}
+
+void	Parser::isValidIP(const std::string& ip)
+{
+	std::stringstream	ss(ip);
+	std::string			segment;
+	int	count = 0;
+
+	while (std::getline(ss, segment, '.'))
+	{
+		if (!isNumber(segment))
+			throwError("Invalid IP value");
+
+		int number = std::stoi(segment);
+		if (number < 0 || number > 255)
+			throwError("Invalid IP range");
+		count++;
+	}
+	
+	if (count != 4)
+		throwError("Invalid IP address");
+}
+
 void	Parser::parseListenDirective(serverConfig& sC)
 {
 	const Token&	address = verifyToken(tokenType::TOKEN_WORD, "Expected address after 'listen' directive");
+
+
+
+
+
+	
 	sC.listen.push_back(address.value);
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after listen value");
 }

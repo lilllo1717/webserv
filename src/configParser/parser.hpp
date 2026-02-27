@@ -77,6 +77,9 @@ class Parser
 		routeConfig		parseLocationBlock();
 
 		// parse server block
+		void			isValidPort(int port);
+		void			isValidIP(const std::string& ip);
+		
 		void			parseListenDirective(serverConfig& sC);
 		void			parseServerNameDirective(serverConfig& sC);
 		void			parseBodySizeDirective(serverConfig& sC);
