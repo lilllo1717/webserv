@@ -28,10 +28,16 @@ struct routeConfig
 	std::map<std::string, std::string>	cgi;
 };
 
+struct listenConfig
+{
+	std::string	host;
+	int			port;
+};
+
 // Apply to the whole virtual host/website
 struct serverConfig
 {
-	std::vector<std::string>	listen; // IP address of server
+	std::vector<listenConfig>	listen; // IP address of server
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::map<int, std::string>	errorPages; // 404, 400, 500, etc.
 	size_t						clientMaxBodySize = 0;

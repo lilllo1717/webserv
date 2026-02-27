@@ -290,13 +290,44 @@ void	Parser::parseListenDirective(serverConfig& sC)
 {
 	const Token&	address = verifyToken(tokenType::TOKEN_WORD, "Expected address after 'listen' directive");
 
+	std::string	value = address.value;
 
+	std::string host = "0.0.0.0";
+	int port;
 
+	size_t	colon = value.find(':');
+	if (colon == std::string::npos)
+	{
+		if (!isNumber(value))
+			throwError("Invalid port values");
+		
+		port = std::stoi(value);
+		isValidPort(port);
+	}
+	else
+	{
+		host = value.substr(0, colon);
+		std::string	portString = value.substr(colon + 1);
 
+		isValidIP(host);
 
-	
-	sC.listen.push_back(address.value);
+		if (!isNumber(portString))
+			throwError("Invalid port values");
+		
+		port = std::stoi(portString);
+		isValidPort(port);
+	}
+
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after listen value");
+
+	// Preventing duplicates
+	for (size_t i = 0; i < sC.listen.size(); i++)
+	{
+		if (sC.listen[i].host == host && sC.listen[i].port == port)
+			throwError("Duplicate listen values");	
+	}
+
+	sC.listen.push_back(listenConfig{host, port});
 }
 
 void	Parser::parseServerNameDirective(serverConfig& sC)
