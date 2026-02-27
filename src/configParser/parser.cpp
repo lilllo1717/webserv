@@ -219,37 +219,21 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 	const std::string&	name = token.value;
 
 	if (name == "methods")
-	{
-		return parseMethodsDirective(rC);
-	}
+		parseMethodsDirective(rC);
 	else if (name == "root")
-	{
-		return parseRootDirective(rC);
-	}
+		parseRootDirective(rC);
 	else if (name == "index")
-	{
-		return parseIndexDirective(rC);
-	}
+		parseIndexDirective(rC);
 	else if (name == "autoindex")
-	{
-		 return parseAutoindexDirective(rC);
-	}
+		parseAutoindexDirective(rC);
 	else if (name == "upload_store")
-	{
-		return parseUploadStoreDirective(rC);
-	}
+		parseUploadStoreDirective(rC);
 	else if (name == "cgi")
-	{
-		return parseCGIDirective(rC);
-	}
+		parseCGIDirective(rC);
 	else if (name == "return")
-	{
-		return parseReturnDirective(rC);
-	}
+		parseReturnDirective(rC);
 	else
-	{
 		throwError("Unknown directive in location block: " + name);
-	}
 }
 
 routeConfig	Parser::parseLocationBlock()
@@ -343,25 +327,15 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 		return;
 	}
 	else if (name == "listen")
-	{
 		parseListenDirective(sC);
-	}
 	else if (name == "server_name")
-	{
 		parseServerNameDirective(sC);
-	}
 	else if (name == "client_max_body_size")
-	{
 		parseBodySizeDirective(sC);
-	}
 	else if (name == "error_page")
-	{
 		parseErrorPageDirective(sC);
-	}
 	else
-	{
 		throwError("Unknown directive inside server block: " + name);
-	}
 }
 
 serverConfig Parser::parseServerBlock()
