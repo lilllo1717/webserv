@@ -20,7 +20,7 @@ void trim(std::string& s)
     s = s.substr(start, end - start);
 }
 
-static void lowerLettersInHeaders(std::string& header)
+void lowerLettersInHeaders(std::string& header)
 {
     std::transform(header.begin(), header.end(), header.begin(), ::tolower);
 }
@@ -67,3 +67,4 @@ ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
     }
     return PARSE_DONE;
 };
+

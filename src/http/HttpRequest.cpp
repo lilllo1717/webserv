@@ -115,15 +115,12 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         }
         else if (request.parseState == BODY)
         {
-            // if (request.bodyType == CHUNKED)
-            //     parseChunkedBody(request);
 
             std::cout << "entered body parsing" << "\n";
             ParseResult parseRes = parseBody(request);
             if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
                 return parseRes;
             return PARSE_DONE;
-
         }
     }
     return PARSE_DONE;

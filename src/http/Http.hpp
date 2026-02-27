@@ -28,8 +28,10 @@ enum BodyType
 enum ChunkState
 {
     CHUNK_SIZE,
+    CHUNK_SIZE_CRLF,
     CHUNK_DATA,
-    CHUNK_CRLF,
+    CHUNK_DATA_CRLF,
+    CHUNK_TRAILERS,
     CHUNK_DONE
 };
 
@@ -94,7 +96,12 @@ struct HttpRequest
 
     /*    --------   Chunks  ---------   */
     std::size_t chunkRemainingSize = 0; // for chunked transfer encoding, size of the current chunk being processed
+    std::string sizeBuffer;
+    // std::string body;
     enum ChunkState chunkState = CHUNK_SIZE;
+
+    /*    --------   Trailers  ---------   */
+    std::map<std::string, std::string> trailers;
 };
 
 struct HttpResponse
@@ -171,6 +178,7 @@ private:
     static ParseResult validateUri(std::string &uri);
     static ParseResult parseSingleHeader(std::string &buffer, HttpRequest& request);
     static ParseResult parseBody(HttpRequest& request);
+    
 
 
 
@@ -178,5 +186,7 @@ private:
 
 
 void trim(std::string& header);
+bool is_hex(char c);
+void lowerLettersInHeaders(std::string& header);
 
 #endif
