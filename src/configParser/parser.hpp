@@ -85,6 +85,8 @@ class Parser
 		// parse server block
 		void			isValidPort(int port);
 		void			isValidIP(const std::string& ip);
+
+		void			isValidStatusCode(int code, bool directive);
 		
 		void			parseListenDirective(serverConfig& sC);
 		void			parseServerNameDirective(serverConfig& sC);

@@ -194,6 +194,21 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
 }
 
+void	Parser::isValidStatusCode(int code, bool directive)
+{
+	if (directive)
+	{
+		if (code < 100 || code > 599)
+			throwError("Invalid HTTP status code");
+	}
+	else
+	{
+		if (code < 300 || code > 599)
+			throwError("Invalid error_page status code");
+	}
+}
+
+
 void	Parser::parseReturnDirective(routeConfig& rC)
 {
 	rC.isRedirect = true;
@@ -206,6 +221,8 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 
 	const std::string& value = currentPosition().value;
 	int code = std::stoi(value);
+	isValidStatusCode(code, true);
+
 	rC.redirectCode = code;
 	moveForward();
 
@@ -372,6 +389,7 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 		if (value.empty() || !std::all_of(value.begin(), value.end(), ::isdigit))
 			break;
 		int code = std::stoi(value);
+		isValidStatusCode(code, false);
 		errorCodes.push_back(code);
 
 		moveForward();
