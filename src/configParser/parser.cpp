@@ -208,7 +208,6 @@ void	Parser::isValidStatusCode(int code, bool directive)
 	}
 }
 
-
 void	Parser::parseReturnDirective(routeConfig& rC)
 {
 	rC.isRedirect = true;
@@ -346,32 +345,35 @@ void	Parser::parseListenDirective(serverConfig& sC)
 
 	sC.listen.push_back(listenConfig{host, port});
 }
-#include <set>
 
-static bool isDirectiveKeyword(const std::string& word)
+static bool	isValidServerName(const std::string& name)
 {
-    static const std::set<std::string> directives = {
-        "listen",
-        "server_name",
-        "root",
-        "index",
-        "autoindex",
-        "methods",
-        "cgi",
-        "return",
-        "error_page",
-        "upload_store",
-        "client_max_body_size",
-        "location"
-    };
-    return directives.count(word);
+	if (name.empty())
+		return false;
+
+	size_t	start = 0;
+
+	if (start == name.size())
+		return false;
+	
+	if (name[start] == '.' || name.back() == '.')
+		return false;
+	
+	for (size_t i = start; i < name.size(); ++i)
+	{
+		char c = name[i];
+		if (!std::isalnum(c) || c == '-' || c == '.')
+			return false;
+	}
+	return true;
 }
 
 void	Parser::parseServerNameDirective(serverConfig& sC)
 {
 	bool	parsedAtLeastOne = false;
 
-	while (currentPosition().type == tokenType::TOKEN_WORD && !isDirectiveKeyword(currentPosition().value))
+	while (currentPosition().type == tokenType::TOKEN_WORD
+		&& !isValidServerName(currentPosition().value))
 	{
 		sC.serverNames.push_back(currentPosition().value);
 		moveForward();
