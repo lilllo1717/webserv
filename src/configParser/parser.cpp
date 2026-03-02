@@ -346,12 +346,32 @@ void	Parser::parseListenDirective(serverConfig& sC)
 
 	sC.listen.push_back(listenConfig{host, port});
 }
+#include <set>
+
+static bool isDirectiveKeyword(const std::string& word)
+{
+    static const std::set<std::string> directives = {
+        "listen",
+        "server_name",
+        "root",
+        "index",
+        "autoindex",
+        "methods",
+        "cgi",
+        "return",
+        "error_page",
+        "upload_store",
+        "client_max_body_size",
+        "location"
+    };
+    return directives.count(word);
+}
 
 void	Parser::parseServerNameDirective(serverConfig& sC)
 {
 	bool	parsedAtLeastOne = false;
 
-	while (currentPosition().type == tokenType::TOKEN_WORD)
+	while (currentPosition().type == tokenType::TOKEN_WORD && !isDirectiveKeyword(currentPosition().value))
 	{
 		sC.serverNames.push_back(currentPosition().value);
 		moveForward();
@@ -359,6 +379,7 @@ void	Parser::parseServerNameDirective(serverConfig& sC)
 	}
 	if (!parsedAtLeastOne)
 		throwError("There should be at least one server name");
+
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after server_name value");
 }
 
