@@ -130,7 +130,6 @@ static ParseResult parseChunkedBody(HttpRequest& request)
             case CHUNK_SIZE:
                 result = parseChunkSize(request);
                 break;
-
             case CHUNK_SIZE_CRLF:
                result = parseChunkSizeCRLF(request);
                 break;

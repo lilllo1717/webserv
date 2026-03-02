@@ -11,8 +11,9 @@
 
 
 Server::Server()
-    :   _hostAddress("127.0.0.1"),
-        _listenPort(8080),
+    :   _hostAddress(""),
+        _listenPort(-1),
+        _serverName(),
         _listenFd(-1),
         _started(false),
         _reusableAddress(false),
@@ -26,6 +27,7 @@ Server::Server()
 Server::Server(const serverConfig& config)
     :   _hostAddress(config.endpoint.ip),
         _listenPort(config.endpoint.port),
+        _serverName(config.serverNames),
         _listenFd(-1),
         _started(false),
         _reusableAddress(false),
@@ -51,6 +53,11 @@ void Server::setHostAddress(const std::string& address)
 const std::string& Server::getHostAddress() const
 {
     return _hostAddress;
+}
+
+const std::vector<std::string>& Server::getServerNames() const
+{
+    return _serverName;
 }
 
 void Server::setListenPort(int port)

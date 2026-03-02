@@ -101,12 +101,20 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
 
             ParseResult parseRes = parseHeader(request);
             if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+            {
+                std::cout << "some error in parse: " << parseRes <<"\n";
+                
                 return parseRes;
+            }
             std::cout << "parsed header" << "\n";
             BodyType typeRes = establishBodyType(request);
             std::cout << "BodyType: " << typeRes << "\n";
             if (typeRes == NONE)
+            {
+                std::cout << "Body in NONE, parsing is done" << "\n";
+                request.parseResult = PARSE_DONE;
                 return PARSE_DONE;
+            }
             else if (typeRes == UNSUPPORTED)
                 return PARSE_ERROR;
             else
@@ -120,8 +128,10 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             ParseResult parseRes = parseBody(request);
             if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
                 return parseRes;
+            request.parseResult = PARSE_DONE;
             return PARSE_DONE;
         }
     }
+    request.parseResult = PARSE_DONE;
     return PARSE_DONE;
 };

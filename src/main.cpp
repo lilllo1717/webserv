@@ -58,8 +58,14 @@ int main(int argc, char **argv)
 	serverConfig config3;
 
 	initializeConfig(config1, "127.0.0.1", 8080);
+	config1.serverNames.push_back("example.com");
+
 	initializeConfig(config2, "127.0.0.1", 8080);
+	config2.serverNames.push_back("test.com");
+
 	initializeConfig(config3, "127.0.0.2", 8081);
+	config3.serverNames.push_back("other.com");
+
 
 	configs.push_back(config1);
 	configs.push_back(config2);

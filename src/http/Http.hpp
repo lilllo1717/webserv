@@ -16,6 +16,9 @@
 #include <cctype>
 #include <algorithm>
 #include <charconv>
+// #include "../manager/Manager.hpp"
+#include "webserv.hpp"
+
 
 enum BodyType
 {
@@ -57,6 +60,30 @@ enum HTTP_Method
     HTTP_POST,
     HTTP_DELETE,
     HTTP_UNKNOWN
+};
+
+enum class HTTP_StatusCode : int
+{
+    OK = 200,
+    CREATED = 201,
+    NO_CONTENT = 204,
+
+    MOVED_PERMANENTLY = 301,
+    FOUND = 302,
+
+    BAD_REQUEST = 400,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    METHOD_NOT_ALLOWED = 405,
+    PAYLOAD_TOO_LARGE = 413,
+    URI_TOO_LONG = 414,
+    UNPROCESSABLE_ENTITY = 422,
+
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    BAD_GATEWAY = 502,
+    GATEWAY_TIMEOUT = 504
+    
 };
 
 struct HttpRequest
@@ -107,7 +134,8 @@ struct HttpRequest
 struct HttpResponse
 {
     /*    --------  Status line  ---------   */ // HTTP/1.1 200 OK
-    int statusCode = 200;                       // 200, 404, etc.
+    /*   Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF   */
+    HTTP_StatusCode statusCode = HTTP_StatusCode::OK;                      // 200, 404, etc.
 
     /*    --------   Headers  ---------   */
     std::map<std::string, std::string> headers;
@@ -169,18 +197,22 @@ public:
         }
     };
 
-private:
-    static ParseResult parseRequestLine(HttpRequest &request);
-    static ParseResult parseRawRequestLine(std::string &requestLine, HttpRequest &request);
-    static ParseResult parseHeader(HttpRequest &request);
-    static HTTP_Method parseMethodChunk(std::string &requestLine, Cursor &cursor);
-    static ParseResult parseUriChunk(std::string &requestLine, Cursor &cursor, HttpRequest &request);
-    static ParseResult validateUri(std::string &uri);
-    static ParseResult parseSingleHeader(std::string &buffer, HttpRequest& request);
-    static ParseResult parseBody(HttpRequest& request);
+    private:
+        static ParseResult parseRequestLine(HttpRequest &request);
+        static ParseResult parseRawRequestLine(std::string &requestLine, HttpRequest &request);
+        static ParseResult parseHeader(HttpRequest &request);
+        static HTTP_Method parseMethodChunk(std::string &requestLine, Cursor &cursor);
+        static ParseResult parseUriChunk(std::string &requestLine, Cursor &cursor, HttpRequest &request);
+        static ParseResult validateUri(std::string &uri);
+        static ParseResult parseSingleHeader(std::string &buffer, HttpRequest& request);
+        static ParseResult parseBody(HttpRequest& request);
     
+};
 
-
+class Router
+{
+    public:
+        HttpResponse handleRequest(const HttpRequest& request, const Listener& listener);
 
 };
 

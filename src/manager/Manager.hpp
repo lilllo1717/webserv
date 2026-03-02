@@ -13,8 +13,12 @@
 # include "../client/Client.hpp"
 # include "../server/Server.hpp"
 # include "../configParser/parser.hpp"
+# include "../http/Router.hpp"
+
 
 struct Listener;
+class Client;
+class Router;
 
 class Manager
 {
@@ -23,11 +27,13 @@ class Manager
         std::unordered_map<int, std::unique_ptr<Client>>   _clients; // key: client socket fd, value: client pointer
         std::unordered_map<int, Server*>   _clientFdToServer; // key: client socket fd, value: server pointer
         // std::unordered_map<int, std::vector<Server*>> _listenFdToServers;
-
+        
         std::vector<pollfd>     _poll_fds;
         std::vector<Listener> _listeners;
+        Router                 _router;
 
         std::unordered_map<int, size_t> _listenFdtoListenerIndex; // key: listen socket fd, value: index in _listeners vector
+        std::unordered_map<int, size_t> _clientFdToListenerIndex;
 
     public:
         Manager();

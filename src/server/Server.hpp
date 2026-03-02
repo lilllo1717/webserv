@@ -16,16 +16,18 @@
 # include "../client/Client.hpp"
 # include "../src/configParser/parser.hpp"
 // # include "webserv.hpp"
+class Client;
 
 class Server
 {
     private:
-        std::string             _hostAddress;
-        int                     _listenPort;
-        int                     _listenFd;
-        bool                    _started;
-        bool                    _reusableAddress;
-        bool                    _optionKeepAlive;
+        std::string                     _hostAddress;
+        int                             _listenPort;
+        std::vector<std::string>        _serverName;
+        int                             _listenFd;
+        bool                            _started;
+        bool                            _reusableAddress;
+        bool                            _optionKeepAlive;
         std::unordered_map<int, std::unique_ptr<Client>>   _clients;
         size_t                  _bytesSent;
         size_t                  _bytesReceived;
@@ -40,10 +42,13 @@ class Server
         Server(const serverConfig& config);
         Server(const Server&) = delete;
         Server& operator=(const Server& other) = delete;
-        virtual ~Server();
+        ~Server();
 
         void setHostAddress(const std::string& address);
         const std::string& getHostAddress() const;
+
+        const std::vector<std::string>& getServerNames() const;
+
 
         void setListenPort(int port);
         int getListenPort() const;

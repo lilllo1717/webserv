@@ -143,9 +143,10 @@ void Manager::run()
 
                     // int fdflags = fcntl(new_socket_fd, F_GETFD, 0);
                     // fcntl(new_socket_fd, F_SETFD, fdflags | FD_CLOEXEC);
-
+                    size_t listenerIndex = it->second;
                     _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
                     addClient(new_socket_fd);
+                    _clientFdToListenerIndex[new_socket_fd] = listenerIndex;
                 }
             }
             else if (!found && (_poll_fds[i].revents & POLLIN))
@@ -188,12 +189,31 @@ void Manager::run()
                 HttpRequest& request = client->getHttpRequest();
                 request.buffer.append(temp_buffer, message_size);
                 HttpRequestParser::parse(request);
+                
                 std::cout << "Parsed request method: " << request.method << "\n";
                 // client->appendToReceiveBuffer(std::string(temp_buffer, message_size));
                 // client->appendToSendBuffer(std::string(temp_buffer, message_size));
                 // _poll_fds[i].events |= POLLOUT;
                 // addBytesReceived(message_size);
                 std::cout << "Received " << message_size << " bytes from client " << client_fd << "message: " << request.buffer << "\n";
+                std::cout << "ParseResut: " << request.parseResult << "\n";
+                if (request.parseResult == PARSE_ERROR)
+                {
+                    std::cout << "PARSE_ERROR" << "\n";
+                }
+                else if (request.parseResult == PARSE_DONE)
+                {
+                    std::cout << "PARSE_DONE" << "\n";
+                    size_t listen_index = _clientFdToListenerIndex[client_fd];
+                    std::cout << "listen_index: " << listen_index << "\n";
+
+                    Listener& listener = _listeners[listen_index];
+                    std::cout << "listener: " << listener.endpoint.ip << " " << listener.endpoint.port << "\n";
+
+                    HttpResponse response = _router.handleRequest(request, listener);
+                    //generate response;
+
+                }
 
             }
 
