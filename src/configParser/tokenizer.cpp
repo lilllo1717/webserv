@@ -180,22 +180,3 @@ Token	Tokenizer::createToken()
 	moveForward();
 	return Token(tokenType::TOKEN_ERROR, errorMessage, startLine, startCol);
 }
-
-Token	Tokenizer::peekToken()
-{
-	// Save current state before peeking
-	std::size_t	savedPos = _idx;
-	int	savedLine = _line;
-	int savedCol = _col;
-
-	// Peek at the next token
-	Token t = createToken();
-
-	// After peeking, go back to previous state
-	_idx = savedPos;
-	_line = savedLine;
-	_col = savedCol;
-
-	return (t);
-}
-

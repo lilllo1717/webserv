@@ -52,13 +52,6 @@ class Tokenizer
 		// ~Tokenizer();
 
 		Token	createToken();
-		Token	peekToken();
-
-		// Getters
-		std::string	getSrc() const;
-		size_t		getIndex() const;
-		int			getLine() const;
-		int			getCol() const;
 };
 
 std::string	readFile(const std::string& path);
