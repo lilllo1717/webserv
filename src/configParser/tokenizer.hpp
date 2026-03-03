@@ -2,15 +2,19 @@
 # define TOKENIZER_HPP
 
 # include <iostream>
+# include <fstream>
+# include <string>
+# include <sstream>
+# include <stdexcept>
 
-enum tokenType
+enum class tokenType
 {
 	TOKEN_WORD, // "lister", "server", "location", etc.
 	TOKEN_LBRACE, // {
 	TOKEN_RBRACE, // }
 	TOKEN_SEMICOLON, // ;
 	TOKEN_EOF,
-	TOKEN_ERROR,
+	TOKEN_ERROR, // invalid char or unterminated string
 };
 
 struct Token
@@ -19,31 +23,37 @@ struct Token
 	std::string	value;
 	int			line; // returns the line the token is in; useful for debugging/error handling
 	int			column; // returns the column the token starts in; useful for debugging/error handling
+
+	Token(tokenType t = tokenType::TOKEN_EOF, std::string v = "", int ln = 1, int col = 1)
+		: type(t), value(v), line(ln), column(col) {}
 };
 
 class Tokenizer
 {
 	private:
 		std::string _src;
-		size_t		_index;
+		size_t		_idx;
 		int			_line;
 		int			_col;
 
+		char	currentPosition() const;
+		bool	isEOF();
+		void	moveForward();
+		void	skipWhitespaceAndComments();
+
+		Token	readIdentifier();
+		Token	readQuotedWord();
+
 	public:
 		// Orthodox canonical form
-		Tokenizer();
-		Tokenizer(const Tokenizer& other);
+		Tokenizer(std::string& input);
+		// Tokenizer(const Tokenizer& other);
 		Tokenizer&	operator=(const Tokenizer& other);
-		~Tokenizer();
+		// ~Tokenizer();
 
-		Token	next_token();
-		Token	peek_token();
-
-		// Getters
-		std::string	getSrc() const;
-		size_t		getIndex() const;
-		int			getLine() const;
-		int			getCol() const;
+		Token	createToken();
 };
+
+std::string	readFile(const std::string& path);
 
 #endif
