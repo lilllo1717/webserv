@@ -78,7 +78,7 @@ HttpResponse Router::handleRequest(const HttpRequest& request, const Listener& l
                 << selectedServer->getListenPort() << "\n";
     }
     return constructResponse(200);
-    // 1. Find matching server block (Host header)
+    // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path)
     // 3. Check allowed methods
     // 4. Check redirect
