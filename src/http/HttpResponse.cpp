@@ -48,6 +48,8 @@ HttpResponse constructResponse(int statusCode)
 
 bool matchRouteWithConfig(const std::string& requestUri, const std::string& configUri)
 {
+    std::cout << "requestUri: [" << requestUri << "]\n";
+    std::cout << "configUri: [" << configUri << "]\n";
 
     if (requestUri == configUri)
     {
@@ -69,6 +71,7 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
         std::cout << "match, longer uri" << "\n";
         return true;
     }
+    std::cout << "matchRouteWithConfig returns false" << "\n";
     return false;
 }
 
@@ -105,26 +108,34 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     }
     const routeConfig* bestMatchRouteConfig = NULL;
     size_t max_uri_len = 0;
+    // std::cout << "route.path" <<  selectedServer->getConfig().routes << "\n";
+
     for (const routeConfig& route : selectedServer->getConfig().routes)
     {
+        std::cout << "route.path" <<  route.path << "\n";
         if (matchRouteWithConfig(request.uri_path, route.path))
         {
+            std::cout << "entered true matchRouteWithConfig" << "\n";
+
             if (route.path.size() > max_uri_len)
             {
                 max_uri_len = route.path.size();
                 bestMatchRouteConfig = &route;
+                std::cout << "interm uri: " << bestMatchRouteConfig->path << "\n";
             }
         }   
     }
     if (bestMatchRouteConfig == NULL)
     {
+        std::cout << "error ar matching uri "  "\n";
+
         return constructResponse(404);
         
     }
     std::cout << "bestMatchRouteConfig uri: " << bestMatchRouteConfig->path << "\n";
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
-    // 2. Find matching location block (URI path) -> done
+    // 2. Find matching location block (URI path) -> in progress
     // 3. Check allowed methods
     // 4. Check redirect
     // 5. Check CGI

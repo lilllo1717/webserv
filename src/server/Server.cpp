@@ -11,7 +11,8 @@
 
 
 Server::Server()
-    :   _hostAddress(""),
+    :   _config(),
+        _hostAddress(""),
         _listenPort(-1),
         _serverName(),
         _listenFd(-1),
@@ -19,23 +20,24 @@ Server::Server()
         _reusableAddress(false),
         _optionKeepAlive(false),
         _bytesSent(0),
-        _bytesReceived(0),
-        _config()
+        _bytesReceived(0)
+        
 {
     std::cout << "Server default Constructor called.\n";
 }
 
-Server::Server()
-    :   _hostAddress(_config.endpoint.ip),
-        _listenPort(_config.endpoint.port),
-        _serverName(_config.serverNames),
+Server::Server(const serverConfig& config)
+    :   _config(config),
+        _hostAddress(config.endpoint.ip),
+        _listenPort(config.endpoint.port),
+        _serverName(config.serverNames),
         _listenFd(-1),
         _started(false),
         _reusableAddress(false),
         _optionKeepAlive(false),
         _bytesSent(0),
-        _bytesReceived(0),
-        _config()
+        _bytesReceived(0)
+        
 {
     std::cout << "Server Constructor called.\n";
 }

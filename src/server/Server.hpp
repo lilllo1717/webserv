@@ -21,6 +21,7 @@ class Client;
 class Server
 {
     private:
+        serverConfig            _config;
         std::string                     _hostAddress;
         int                             _listenPort;
         std::vector<std::string>        _serverName;
@@ -31,7 +32,7 @@ class Server
         std::unordered_map<int, std::unique_ptr<Client>>   _clients;
         size_t                  _bytesSent;
         size_t                  _bytesReceived;
-        serverConfig            _config;
+        
 
     protected:
  
