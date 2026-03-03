@@ -29,11 +29,11 @@ struct routeConfig
 	std::map<std::string, std::string>	cgi;
 };
 
-struct listenConfig
-{
-	std::string	host;
-	int			port;
-};
+// struct listenConfig
+// {
+// 	std::string	host;
+// 	int			port;
+// };
 
 struct serverEndpoint
 {
@@ -45,7 +45,7 @@ struct serverEndpoint
 struct serverConfig
 {
 	serverEndpoint					endpoint; // ip + port to listen on
-	std::vector<listenConfig>	listen; // IP address of server
+	// std::vector<serverEndpoint>	listen; // IP address of server
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::map<int, std::string>	errorPages; // 404, 400, 500, etc.
 	size_t						clientMaxBodySize = 0;

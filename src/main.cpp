@@ -1,4 +1,5 @@
 #include "webserv.hpp"
+# include "../src/configParser/parser.hpp"
 # include "../src/client/Client.hpp"
 # include "../src/server/Server.hpp"
 # include "../src/manager/Manager.hpp"
@@ -24,80 +25,53 @@
 // Sends data to that server
 // Optionally waits for a response
 
-
-
-void initializeConfig(serverConfig& config, const std::string& ip, int port)
-{
-	config.endpoint.ip = ip;
-	config.endpoint.port = port;
-}
-
-
-
 int main(int argc, char **argv)
 {
-	// if (argc != 2)
-	// 	return (1);
-	// std::vector<pollfd> poll_fds;
+    if (argc != 2)
+    {
+        std::cerr << "Usage: ./webserv <config_file>\n";
+        return 1;
+    }
 
-	(void)argv;
-	(void)argc;
+    try
+    {
+        // Read config file
+        std::string configText = readFile(argv[1]);
 
-	// struct sockaddr_in client_address;
-	// socklen_t	client_len;
-	// int new_socket_fd;
-	// char	buffer[256];
-	// int 	byte_read;
+        // Tokenize
+        Tokenizer tokenizer(configText);
+        std::vector<Token> tokens;
 
-	Manager manager;
-	std::vector<serverConfig> configs;
-	// std::vector<Listener> listeners;
+        Token token;
+        do
+        {
+            token = tokenizer.createToken();
+            tokens.push_back(token);
+        }
+        while (token.type != tokenType::TOKEN_EOF);
 
-	serverConfig config1;
-	serverConfig config2;
-	serverConfig config3;
+        // Parse
+        Parser parser(tokens);
+        mainConfig parsedConfig = parser.parse();
 
-	initializeConfig(config1, "127.0.0.1", 8080);
-	config1.serverNames.push_back("example.com");
+        // Create Manager
+        Manager manager;
 
-	initializeConfig(config2, "127.0.0.1", 8080);
-	config2.serverNames.push_back("test.com");
+        // Add parsed servers to manager
+        for (size_t i = 0; i < parsedConfig.servers.size(); ++i)
+        {
+            manager.addServer(std::make_unique<Server>(parsedConfig.servers[i]));
+        }
 
-	initializeConfig(config3, "127.0.0.2", 8081);
-	config3.serverNames.push_back("other.com");
+        manager.buildListenersFromServers();
+        manager.startListenersServers();
+        manager.run();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 
-
-	configs.push_back(config1);
-	configs.push_back(config2);
-	configs.push_back(config3);
-
-	for (size_t i = 0; i < configs.size(); i++)
-	{
-		manager.addServer(std::make_unique<Server>(configs[i]));
-	}
-	manager.buildListenersFromServers();
-	manager.startListenersServers();
-	manager.run();
-	// for (size_t i = 0; i < listeners.size(); i++)
-	// {
-	// 	std::cout << " listeners: "<< listeners[i].endpoint.ip << "\n";
-	// }
-
-	// server.start();
-
-	// client_len = sizeof(client_address);
-	// new_socket_fd = accept(server.getListenFd(), (struct sockaddr*)&client_address, &client_len);
-	// if (new_socket_fd < 0)
-	// {
-	// 	std::cerr << "accept failed.\n";
-	// 	return (1);
-	// }
-	// send(new_socket_fd, "Hello, world!\n", 13, 0);
-	// bzero(buffer, 256);
-
-	// byte_read = read(new_socket_fd, buffer, 255);
-	// printf("Message: %s\n", buffer);
-	// server.run();
-	// server.stop();
-	return (0);
+    return 0;
 }

@@ -36,6 +36,8 @@ class Tokenizer
 		int			_line;
 		int			_col;
 
+		// std::string		readFile(const std::string& path);
+		
 		char	currentPosition() const;
 		bool	isEOF();
 		void	moveForward();

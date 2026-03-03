@@ -337,13 +337,16 @@ void	Parser::parseListenDirective(serverConfig& sC)
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after listen value");
 
 	// Preventing duplicates
-	for (size_t i = 0; i < sC.listen.size(); i++)
-	{
-		if (sC.listen[i].host == host && sC.listen[i].port == port)
-			throwError("Duplicate listen values");	
-	}
+	// for (size_t i = 0; i < sC.listen.size(); i++)
+	// {
+	// 	if (sC.listen[i].ip == host && sC.listen[i].port == port)
+	// 		throwError("Duplicate listen values");	
+	// }
 
-	sC.listen.push_back(listenConfig{host, port});
+	// sC.listen.push_back(serverEndpoint{host, port});
+
+	sC.endpoint.ip = host;
+	sC.endpoint.port = port;
 }
 
 static bool	isValidServerName(const std::string& name)
@@ -478,71 +481,71 @@ mainConfig	Parser::parse()
 	return mC;
 }
 
-static const char*	printTokenType(tokenType t)
-{
-	switch (t)
-	{
-		case tokenType::TOKEN_WORD:
-			return "WORD";
-		case tokenType::TOKEN_LBRACE:
-			return "LEFT BRACE";
-		case tokenType::TOKEN_RBRACE:
-			return "RIGHT BRACE";
-		case tokenType::TOKEN_SEMICOLON:
-			return "SEMICOLON";
-		case tokenType::TOKEN_EOF:
-			return "EOF";
-		case tokenType::TOKEN_ERROR:
-			return "ERROR";
-	}
-}
+// static const char*	printTokenType(tokenType t)
+// {
+// 	switch (t)
+// 	{
+// 		case tokenType::TOKEN_WORD:
+// 			return "WORD";
+// 		case tokenType::TOKEN_LBRACE:
+// 			return "LEFT BRACE";
+// 		case tokenType::TOKEN_RBRACE:
+// 			return "RIGHT BRACE";
+// 		case tokenType::TOKEN_SEMICOLON:
+// 			return "SEMICOLON";
+// 		case tokenType::TOKEN_EOF:
+// 			return "EOF";
+// 		case tokenType::TOKEN_ERROR:
+// 			return "ERROR";
+// 	}
+// }
 
-int main(int argc, char** argv)
-{
-    if (argc != 2)
-    {
-        std::cerr << "Usage: ./webserv <config_file>\n";
-        return 1;
-    }
+// int main(int argc, char** argv)
+// {
+//     if (argc != 2)
+//     {
+//         std::cerr << "Usage: ./webserv <config_file>\n";
+//         return 1;
+//     }
 
-    try
-    {
-        std::string configText = readFile(argv[1]);
+//     try
+//     {
+//         std::string configText = readFile(argv[1]);
 
-        Tokenizer tokenizer(configText);
+//         Tokenizer tokenizer(configText);
 
-        // test token output
-		std::vector<Token>	tokens;
-        Token token;
-        do
-		{
-            token = tokenizer.createToken();
-			tokens.push_back(token);
-			std::cout << "[" << token.line << ":" << token.column << "] "
-                  << printTokenType(token.type)
-                  << " -> \"" << token.value << "\""
-                  << std::endl;
-        } while (token.type != tokenType::TOKEN_EOF);
+//         // test token output
+// 		std::vector<Token>	tokens;
+//         Token token;
+//         do
+// 		{
+//             token = tokenizer.createToken();
+// 			tokens.push_back(token);
+// 			std::cout << "[" << token.line << ":" << token.column << "] "
+//                   << printTokenType(token.type)
+//                   << " -> \"" << token.value << "\""
+//                   << std::endl;
+//         } while (token.type != tokenType::TOKEN_EOF);
 
-		Parser parser(tokens);
-		mainConfig	mC = parser.parse();
+// 		Parser parser(tokens);
+// 		mainConfig	mC = parser.parse();
 
-		for (size_t i = 0; i < mC.servers.size(); i++)
-		{
-			const serverConfig& sC = mC.servers[i];
-			std::cout << std::endl;
-			std::cout << "[Server " << i << "]" << std::endl;
-            std::cout << "  listen entries: " << sC.listen.size() << std::endl;
-            std::cout << "  server_names:   " << sC.serverNames.size() << std::endl;
-            std::cout << "  routes:         " << sC.routes.size() << std::endl;
-		}
+// 		for (size_t i = 0; i < mC.servers.size(); i++)
+// 		{
+// 			const serverConfig& sC = mC.servers[i];
+// 			std::cout << std::endl;
+// 			std::cout << "[Server " << i << "]" << std::endl;
+//             // std::cout << "  listen entries: " << sC.listen.size() << std::endl;
+//             std::cout << "  server_names:   " << sC.serverNames.size() << std::endl;
+//             std::cout << "  routes:         " << sC.routes.size() << std::endl;
+// 		}
 
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << e.what() << std::endl;
-        return 1;
-    }
+//     }
+//     catch (const std::exception& e)
+//     {
+//         std::cerr << e.what() << std::endl;
+//         return 1;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
