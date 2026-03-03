@@ -1,13 +1,14 @@
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <iostream>
-#include <iomanip>
-#include <map>
+# include <stdio.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <iostream>
+# include <iomanip>
+# include <map>
+# include "../http/Http.hpp"
 
 class Client
 {
@@ -15,10 +16,12 @@ class Client
         int         _socketFd;
         size_t      _bytesSent;
         size_t      _bytesReceived;
-        std::string _receiveBuffer;
+        // std::string _receiveBuffer;
         size_t      _bufferLimit;
         std::string _sendBuffer;
         size_t      _sendLimit;
+        struct HttpRequest _httpRequest;
+        struct HttpResponse _httpResponse;
 
     public:
         Client();
@@ -32,11 +35,11 @@ class Client
         void addBytesSent(size_t bytes);
         size_t getBytesSent() const;
         
-        void addBytesReceived(size_t bytes);
-        size_t getBytesReceived() const;
+        // void addBytesReceived(size_t bytes);
+        // size_t getBytesReceived() const;
 
-        void appendToReceiveBuffer(const std::string& data);
-        const std::string& getReceiveBuffer() const;
+        // void appendToReceiveBuffer(const std::string& data);
+        // const std::string& getReceiveBuffer() const;
 
         void appendToSendBuffer(const std::string& data);
         const std::string& getSendBuffer() const;
@@ -46,6 +49,13 @@ class Client
 
         void setSendLimit(size_t limit);
         size_t getSendLimit() const;
+
+        void clearBuffer(size_t bytes);
+
+        HttpRequest& getHttpRequest();
+        HttpResponse& getHttpResponse();
+
+        // void    parseHttpRequest();
 
 };
 

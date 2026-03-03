@@ -4,6 +4,7 @@
 # include <vector>
 # include <string>
 
+
 // Specific URL path inside that website
 struct routeConfig 
 {
@@ -17,13 +18,20 @@ struct routeConfig
 	std::string					cgiPath;	// ".php" file path
 };
 
+struct serverEndpoint
+{
+	std::string					ip;
+	int							port;
+};
+
 // Apply to the whole virtual host/website
 struct serverConfig
 {
-	std::vector<std::string>	listen; // IP address of server
+	serverEndpoint					endpoint; // ip + port to listen on
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::vector<std::string>	errorPages; // 404, 400, 500, etc.
 	std::vector<routeConfig>	routes; // routes inside this server
 };
 
 #endif
+

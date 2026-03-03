@@ -2,29 +2,33 @@
 # define SERVER_HPP
 
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <iostream>
-#include <vector>
-#include <poll.h>
-#include <iomanip>
-#include <map>
-#include <unordered_map>
-#include "../client/Client.hpp"
+# include <stdio.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <iostream>
+# include <vector>
+# include <poll.h>
+# include <iomanip>
+# include <map>
+# include <unordered_map>
+# include <memory>
+# include "../client/Client.hpp"
+# include "../src/configParser/parser.hpp"
+// # include "webserv.hpp"
+class Client;
 
 class Server
 {
     private:
-        std::string             _hostAddress;
-        int                     _listenPort;
-        int                     _listenFd;
-        bool                    _started;
-        bool                    _reusableAddress;
-        bool                    _optionKeepAlive;
-        std::unordered_map<int, Client>   _clients;
-        std::vector<pollfd>     _poll_fds;
+        std::string                     _hostAddress;
+        int                             _listenPort;
+        std::vector<std::string>        _serverName;
+        int                             _listenFd;
+        bool                            _started;
+        bool                            _reusableAddress;
+        bool                            _optionKeepAlive;
+        std::unordered_map<int, std::unique_ptr<Client>>   _clients;
         size_t                  _bytesSent;
         size_t                  _bytesReceived;
 
@@ -35,11 +39,16 @@ class Server
 
     public:
         Server();
-        Server& operator=(const Server& other);
-        virtual ~Server();
+        Server(const serverConfig& config);
+        Server(const Server&) = delete;
+        Server& operator=(const Server& other) = delete;
+        ~Server();
 
         void setHostAddress(const std::string& address);
         const std::string& getHostAddress() const;
+
+        const std::vector<std::string>& getServerNames() const;
+
 
         void setListenPort(int port);
         int getListenPort() const;
@@ -56,7 +65,7 @@ class Server
         void addClient(int socketFd);
         void removeClient(int socketFd);
         Client* getClient(int socketFd);
-        const std::unordered_map<int, Client>& getClients() const;
+        const std::unordered_map<int, std::unique_ptr<Client>>& getClients() const;
         void addBytesSent(size_t bytes);
         size_t getBytesSent() const;
 
@@ -68,5 +77,6 @@ class Server
         void stop();
 
 };
+
 
 #endif

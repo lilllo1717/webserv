@@ -1,4 +1,7 @@
 #include "webserv.hpp"
+# include "../src/client/Client.hpp"
+# include "../src/server/Server.hpp"
+# include "../src/manager/Manager.hpp"
 
 
 // Create one listening socket
@@ -21,6 +24,16 @@
 // Sends data to that server
 // Optionally waits for a response
 
+
+
+void initializeConfig(serverConfig& config, const std::string& ip, int port)
+{
+	config.endpoint.ip = ip;
+	config.endpoint.port = port;
+}
+
+
+
 int main(int argc, char **argv)
 {
 	// if (argc != 2)
@@ -36,8 +49,41 @@ int main(int argc, char **argv)
 	// char	buffer[256];
 	// int 	byte_read;
 
-	Server server;
-	server.start();
+	Manager manager;
+	std::vector<serverConfig> configs;
+	// std::vector<Listener> listeners;
+
+	serverConfig config1;
+	serverConfig config2;
+	serverConfig config3;
+
+	initializeConfig(config1, "127.0.0.1", 8080);
+	config1.serverNames.push_back("example.com");
+
+	initializeConfig(config2, "127.0.0.1", 8080);
+	config2.serverNames.push_back("test.com");
+
+	initializeConfig(config3, "127.0.0.2", 8081);
+	config3.serverNames.push_back("other.com");
+
+
+	configs.push_back(config1);
+	configs.push_back(config2);
+	configs.push_back(config3);
+
+	for (size_t i = 0; i < configs.size(); i++)
+	{
+		manager.addServer(std::make_unique<Server>(configs[i]));
+	}
+	manager.buildListenersFromServers();
+	manager.startListenersServers();
+	manager.run();
+	// for (size_t i = 0; i < listeners.size(); i++)
+	// {
+	// 	std::cout << " listeners: "<< listeners[i].endpoint.ip << "\n";
+	// }
+
+	// server.start();
 
 	// client_len = sizeof(client_address);
 	// new_socket_fd = accept(server.getListenFd(), (struct sockaddr*)&client_address, &client_len);
@@ -51,7 +97,7 @@ int main(int argc, char **argv)
 
 	// byte_read = read(new_socket_fd, buffer, 255);
 	// printf("Message: %s\n", buffer);
-	server.run();
-	server.stop();
+	// server.run();
+	// server.stop();
 	return (0);
 }

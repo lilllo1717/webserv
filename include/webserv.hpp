@@ -16,8 +16,24 @@
 # include <vector>
 # include <fcntl.h>
 # include <poll.h>
-# include "../src/client/Client.hpp"
-# include "../src/server/Server.hpp"
+# include <memory>
+// # include "../src/client/Client.hpp"
+// # include "../src/server/Server.hpp"
+// # include "../src/manager/Manager.hpp"
+# include "../src/configParser/parser.hpp"
+
+class Server;
+
+struct Listener
+{
+    serverEndpoint endpoint;
+    int listenFd;
+    std::vector<Server*> servers;
+    Server* defaultServer;
+};
+
+std::vector<Listener> buildListeners(std::vector<std::unique_ptr<Server>>& servers);
+void    startListeners(std::vector<Listener>& listeners);
 
 
 #endif

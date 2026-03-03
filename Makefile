@@ -1,11 +1,22 @@
-CXX             = c++
+CXX             = g++
 RM              = rm -f
-CFLAGS          = -Wall -Wextra -Werror
+CFLAGS          = -Wall -Wextra -Werror -std=c++17
 INCLUDES        = -I include
 
 SRCS            = src/main.cpp \
                   src/server/Server.cpp \
-				  src/client/Client.cpp 
+				  src/client/Client.cpp \
+				  src/manager/Manager.cpp \
+				  src/Listeners.cpp \
+				  src/http/ParseHeaders.cpp \
+				  src/http/ParseBody.cpp \
+				  src/http/ParseRequestLine.cpp \
+				  src/http/HttpRequest.cpp \
+				  src/http/HttpResponse.cpp \
+
+
+# 				  src/configParser/parser.cpp 
+
 
                  
 
