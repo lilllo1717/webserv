@@ -212,7 +212,7 @@ public:
 class Router
 {
     public:
-        HttpResponse handleRequest(const HttpRequest& request, const Listener& listener);
+        HttpResponse handleRequest(HttpRequest& request, const Listener& listener);
 
 };
 

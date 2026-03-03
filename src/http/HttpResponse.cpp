@@ -46,7 +46,33 @@ HttpResponse constructResponse(int statusCode)
 
 }
 
-HttpResponse Router::handleRequest(const HttpRequest& request, const Listener& listener)
+bool matchRouteWithConfig(const std::string& requestUri, const std::string& configUri)
+{
+
+    if (requestUri == configUri)
+    {
+        std::cout << "path matches" << "\n";
+        return true;
+    }
+    if (requestUri.find(configUri) != 0)
+    {
+        std::cout << "no match" << "\n";
+        return false;
+    }
+    if (configUri[configUri.size() - 1] == '/')
+    {
+        std::cout << "just root uri" << "\n";
+        return true;
+    }
+    if (requestUri.size() > configUri.size() && configUri[requestUri.size()] == '/')
+    {
+        std::cout << "match, longer uri" << "\n";
+        return true;
+    }
+    return false;
+}
+
+HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener)
 {
     (void)listener;
     HttpResponse response;
@@ -77,9 +103,28 @@ HttpResponse Router::handleRequest(const HttpRequest& request, const Listener& l
         std::cout << "Routing to server with port "
                 << selectedServer->getListenPort() << "\n";
     }
+    const routeConfig* bestMatchRouteConfig = NULL;
+    size_t max_uri_len = 0;
+    for (const routeConfig& route : selectedServer->getConfig().routes)
+    {
+        if (matchRouteWithConfig(request.uri_path, route.path))
+        {
+            if (route.path.size() > max_uri_len)
+            {
+                max_uri_len = route.path.size();
+                bestMatchRouteConfig = &route;
+            }
+        }   
+    }
+    if (bestMatchRouteConfig == NULL)
+    {
+        return constructResponse(404);
+        
+    }
+    std::cout << "bestMatchRouteConfig uri: " << bestMatchRouteConfig->path << "\n";
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
-    // 2. Find matching location block (URI path)
+    // 2. Find matching location block (URI path) -> done
     // 3. Check allowed methods
     // 4. Check redirect
     // 5. Check CGI
