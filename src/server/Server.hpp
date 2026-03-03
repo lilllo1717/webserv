@@ -31,8 +31,7 @@ class Server
         std::unordered_map<int, std::unique_ptr<Client>>   _clients;
         size_t                  _bytesSent;
         size_t                  _bytesReceived;
-
-
+        serverConfig            _config;
 
     protected:
  
@@ -46,6 +45,7 @@ class Server
 
         void setHostAddress(const std::string& address);
         const std::string& getHostAddress() const;
+        const serverConfig& getConfig() const;
 
         const std::vector<std::string>& getServerNames() const;
 
