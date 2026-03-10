@@ -197,17 +197,19 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     if (it != bestMatchRouteConfig->cgi.end())
     {
         std::cout << "Pair Found, execute CGI." << "\n";
+        // runcgi();
     }
     else
     {
         std::cout << "Pair not found." << "\n";
+        // runNormal();
     }
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
     // 3. Check allowed methods -> done
     // 4. Check redirect -> done
-    // 5. Check CGI 
+    // 5. Check CGI -> done
     // 6. Serve static file
     // 7. Return proper status
 }
