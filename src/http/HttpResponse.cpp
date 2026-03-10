@@ -158,6 +158,12 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
             // std::cout << "no method match." << "\n";
             return constructResponse(405);
          }
+    if (bestMatchRouteConfig->isRedirect == true)
+    {
+        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
+        request.headers["location"] = bestMatchRouteConfig->uploadPath;
+        return constructResponse(bestMatchRouteConfig->redirectCode);
+    }
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
