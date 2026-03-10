@@ -75,6 +75,46 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
     return false;
 }
 
+HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
+{
+	std::string	fullPath;
+
+	if (!route.rootDir.empty())
+		fullPath = route.rootDir + request.uri_path;
+	else
+		fullPath = request.uri_path;
+
+	std::cout << "Serving static file: [" << fullPath << "]\n";
+
+	std::ifstream file(fullPath.c_str(), std::ios::binary);
+
+	if (!file)
+	{
+		std::cout << "File not found!\n";
+		return constructResponse(404);
+	}
+
+	std::ostringstream buffer;
+	buffer << file.rdbuf();
+
+	file.seekg(0, std::ios::end);
+	size_t fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	std::vector<uint8_t> fileData(fileSize);
+
+	file.read(reinterpret_cast<char *>(fileData.data()), fileSize);
+
+	HttpResponse response;
+
+	response.statusCode = HTTP_StatusCode::OK;
+	response.body = std::move(fileData);
+	response.headers["Content-Length"] = std::to_string(response.body.size());
+	response.headers["Content-Body"] = "text/html";
+	
+	return response;
+}
+
 HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener)
 {
     (void)listener;
@@ -141,4 +181,6 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     // 5. Check CGI
     // 6. Serve static file
     // 7. Return proper status
+
+	return serveStaticFile(request, *bestMatchRouteConfig);
 }
