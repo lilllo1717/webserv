@@ -67,7 +67,8 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
         std::cout << "just root uri" << "\n";
         return true;
     }
-    if (requestUri.size() > configUri.size() && configUri[requestUri.size()] == '/')
+    std::cout << "configUri[requestUri.size()]  [" << requestUri[configUri.size()] << "]\n";
+    if (requestUri.size() > configUri.size() && requestUri[configUri.size()] == '/')
     {
         std::cout << "match, longer uri" << "\n";
         return true;
@@ -90,6 +91,19 @@ std::string methodToString(HTTP_Method method)
             return "";
     }
 }
+
+std::string extractExtensionFromUri(HttpRequest request)
+{
+    std::cout << "request.uri_path: [" << request.uri_path << "]\n";
+    size_t lastSlash = request.uri_path.rfind("/");
+    size_t lastDot = request.uri_path.rfind(".");
+
+    if (lastDot == std::string::npos || lastDot < lastSlash || lastDot == lastSlash + 1)
+        return "";
+     std::cout << "request.uri_path.substr(lastDot) [" << request.uri_path.substr(lastDot) << "]\n";
+    return request.uri_path.substr(lastDot);
+
+} 
 
 HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener)
 {
@@ -128,7 +142,7 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
 
     for (const routeConfig& route : selectedServer->getConfig().routes)
     {
-        std::cout << "route.path" <<  route.path << "\n";
+        std::cout << "route.path [" <<  route.path << "]\n";
         if (matchRouteWithConfig(request.uri_path, route.path))
         {
             std::cout << "entered true matchRouteWithConfig" << "\n";
@@ -164,12 +178,36 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         request.headers["location"] = bestMatchRouteConfig->uploadPath;
         return constructResponse(bestMatchRouteConfig->redirectCode);
     }
+    std::string extensionFromRequest = extractExtensionFromUri(request);
+    const std::map<std::string, std::string>& cgi = bestMatchRouteConfig->cgi;
+    if (cgi.empty())
+    {
+        std::cout << "CGI is empty =(( " << "\n";
+
+    }
+
+    for (std::map<std::string, std::string>::const_iterator it = cgi.begin();
+        it != cgi.end();
+        ++it)
+    {
+        std::cout << "CGI extension: " << it->first
+                << " interpreter: " << it->second << "\n";
+    }
+    std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
+    if (it != bestMatchRouteConfig->cgi.end())
+    {
+        std::cout << "Pair Found, execute CGI." << "\n";
+    }
+    else
+    {
+        std::cout << "Pair not found." << "\n";
+    }
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
     // 3. Check allowed methods -> done
-    // 4. Check redirect
-    // 5. Check CGI
+    // 4. Check redirect -> done
+    // 5. Check CGI 
     // 6. Serve static file
     // 7. Return proper status
 }
