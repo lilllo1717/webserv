@@ -41,6 +41,7 @@ HttpResponse constructResponse(int statusCode)
     HttpResponse response;
 
     response.statusCode = static_cast<HTTP_StatusCode>(statusCode);
+    std::cout << reasonPhrase(response.statusCode) << "\n";
 
     return response;
 
@@ -73,6 +74,21 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
     }
     std::cout << "matchRouteWithConfig returns false" << "\n";
     return false;
+}
+
+std::string methodToString(HTTP_Method method)
+{
+    switch (method)
+    {
+        case HTTP_GET:
+            return "GET";
+        case HTTP_DELETE:
+            return "DELETE";
+        case HTTP_POST:
+            return "POST";
+        default:
+            return "";
+    }
 }
 
 HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener)
@@ -133,10 +149,19 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         
     }
     std::cout << "bestMatchRouteConfig uri: " << bestMatchRouteConfig->path << "\n";
+    std::string methodStringed = methodToString(request.method);
+    std::cout << "methodStringed: " << methodStringed << "\n";
+
+    if (std::find(bestMatchRouteConfig->httpMethods.begin(), bestMatchRouteConfig->httpMethods.end(), methodStringed)
+         == bestMatchRouteConfig->httpMethods.end())
+         {
+            // std::cout << "no method match." << "\n";
+            return constructResponse(405);
+         }
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
-    // 2. Find matching location block (URI path) -> in progress
-    // 3. Check allowed methods
+    // 2. Find matching location block (URI path) -> done
+    // 3. Check allowed methods -> done
     // 4. Check redirect
     // 5. Check CGI
     // 6. Serve static file
