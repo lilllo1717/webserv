@@ -138,6 +138,8 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
                 << selectedServer->getListenPort() << "\n";
     }
     const routeConfig* bestMatchRouteConfig = NULL;
+    serverConfig selectedServerConfig = selectedServer->getConfig();
+
     size_t max_uri_len = 0;
     // std::cout << "route.path" <<  selectedServer->getConfig().routes << "\n";
 
@@ -198,10 +200,12 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     matchResult.bestMatchRouteConfig = bestMatchRouteConfig;
     matchResult.stringifiedMethod = methodStringed;
     matchResult.remoteAddress = remoteAddr;
+    matchResult.selectedServerCon = selectedServerConfig;
     std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
     if (it != bestMatchRouteConfig->cgi.end())
     {
         CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
+        cgi.executeCgi();
         std::cout << "Pair Found, execute CGI." << "\n";
         // runcgi();
     }

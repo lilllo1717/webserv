@@ -93,6 +93,7 @@ struct RequestMatchResult
     const routeConfig* bestMatchRouteConfig = nullptr;
     std::string stringifiedMethod;
     std::string remoteAddress;
+    serverConfig selectedServerCon;
 
 };
 
