@@ -14,6 +14,7 @@
 # include "../server/Server.hpp"
 # include "../configParser/parser.hpp"
 # include "../http/Router.hpp"
+# include <arpa/inet.h>
 
 
 struct Listener;
@@ -34,6 +35,8 @@ class Manager
 
         std::unordered_map<int, size_t> _listenFdtoListenerIndex; // key: listen socket fd, value: index in _listeners vector
         std::unordered_map<int, size_t> _clientFdToListenerIndex;
+
+        std::map<int, std::string>  _clientFdToRemoteAddress;
 
     public:
         Manager();

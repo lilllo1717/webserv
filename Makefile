@@ -14,7 +14,10 @@ SRCS            = src/main.cpp \
 				  src/http/HttpRequest.cpp \
 				  src/http/HttpResponse.cpp \
 				  src/configParser/parser.cpp \
-				  src/configParser/tokenizer.cpp
+				  src/configParser/tokenizer.cpp \
+				  src/cgi/Cgi.cpp \
+				  src/cgi/Envp.cpp
+
 
 
                  
