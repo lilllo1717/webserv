@@ -1,6 +1,6 @@
 #include "Http.hpp"
 #include "../server/Server.hpp"
-
+#include "../cgi/Cgi.hpp"
 
 
 constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
@@ -105,9 +105,10 @@ std::string extractExtensionFromUri(HttpRequest request)
 
 } 
 
-HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener)
+HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
 {
     (void)listener;
+    RequestMatchResult matchResult;
     HttpResponse response;
     if (request.host.empty())
     {
@@ -193,9 +194,14 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         std::cout << "CGI extension: " << it->first
                 << " interpreter: " << it->second << "\n";
     }
+    matchResult.selectedServer = selectedServer;
+    matchResult.bestMatchRouteConfig = bestMatchRouteConfig;
+    matchResult.stringifiedMethod = methodStringed;
+    matchResult.remoteAddress = remoteAddr;
     std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
     if (it != bestMatchRouteConfig->cgi.end())
     {
+        CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
         std::cout << "Pair Found, execute CGI." << "\n";
         // runcgi();
     }
@@ -205,11 +211,5 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         // runNormal();
     }
     return constructResponse(200);
-    // 1. Find matching server block (Host header) -> done
-    // 2. Find matching location block (URI path) -> done
-    // 3. Check allowed methods -> done
-    // 4. Check redirect -> done
-    // 5. Check CGI -> done
-    // 6. Serve static file
-    // 7. Return proper status
+
 }

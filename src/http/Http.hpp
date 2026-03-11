@@ -20,6 +20,7 @@
 #include "webserv.hpp"
 
 
+
 enum BodyType
 {
     NONE,
@@ -85,6 +86,16 @@ enum class HTTP_StatusCode : int
     GATEWAY_TIMEOUT = 504
     
 };
+
+struct RequestMatchResult
+{
+    const Server* selectedServer = nullptr;
+    const routeConfig* bestMatchRouteConfig = nullptr;
+    std::string stringifiedMethod;
+    std::string remoteAddress;
+
+};
+
 
 struct HttpRequest
 {
@@ -212,7 +223,7 @@ public:
 class Router
 {
     public:
-        HttpResponse handleRequest(HttpRequest& request, const Listener& listener);
+        HttpResponse handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr);
 
 };
 

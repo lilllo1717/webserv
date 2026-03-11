@@ -11,7 +11,8 @@ Manager::Manager()
         // _listenFdToServers(),
         _poll_fds(),
         _listeners(),
-        _listenFdtoListenerIndex()
+        _listenFdtoListenerIndex(),
+        _clientFdToRemoteAddress()
     
 {
     std::cout << "Manager Constructor called.\n";
@@ -131,6 +132,7 @@ void Manager::run()
                 {
                     client_len = sizeof(client_address);
                     new_socket_fd = accept(_poll_fds[i].fd, (struct sockaddr*)&client_address, &client_len);
+                    _clientFdToRemoteAddress[new_socket_fd] = inet_ntoa(client_address.sin_addr);
                     if (new_socket_fd < 0)
                     {
                         if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -210,7 +212,7 @@ void Manager::run()
                     Listener& listener = _listeners[listen_index];
                     std::cout << "listener: " << listener.endpoint.ip << " " << listener.endpoint.port << "\n";
 
-                    HttpResponse response = _router.handleRequest(request, listener);
+                    HttpResponse response = _router.handleRequest(request, listener, _clientFdToRemoteAddress[client_fd]);
                     //generate response;
 
                 }
