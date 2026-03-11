@@ -130,7 +130,7 @@ void	Parser::parseRootDirective(routeConfig& rC)
 void	Parser::parseIndexDirective(routeConfig& rC)
 {
 	const Token&	index = verifyToken(tokenType::TOKEN_WORD, "Expected index value after 'index' directive");
-	rC.defaultFile = index.value;
+	rC.index = index.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after index value");
 }
 

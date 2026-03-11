@@ -15,7 +15,7 @@ struct routeConfig
 	std::string					path;
 	std::vector<std::string>	httpMethods;	// GET, POST, and DELETE
 	std::string					rootDir; // directory to serve
-	std::string					defaultFile; // default file
+	std::string					index; // default file
 
 	bool						autoindex = false;
 

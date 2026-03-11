@@ -81,10 +81,14 @@ HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& rout
 {
 	std::string	fullPath;
 
-	if (!route.rootDir.empty())
-		fullPath = route.rootDir + request.uri_path;
+	if (request.uri_path == "/")
+	{
+   		fullPath = route.rootDir + "/" + route.index;
+	}
 	else
-		fullPath = request.uri_path;
+	{
+    	fullPath = route.rootDir + request.uri_path;
+	}
 
 	std::cout << "Serving static file: [" << fullPath << "]\n";
 
@@ -96,23 +100,22 @@ HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& rout
 		return constructResponse(404);
 	}
 
-	std::ostringstream buffer;
-	buffer << file.rdbuf();
-
 	file.seekg(0, std::ios::end);
-	size_t fileSize = file.tellg();
+	size_t fileSize = static_cast<size_t>(file.tellg());
 	file.seekg(0, std::ios::beg);
 
 	std::vector<uint8_t> fileData(fileSize);
 
-	file.read(reinterpret_cast<char *>(fileData.data()), fileSize);
+	if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
+		return constructResponse(500);
 
 	HttpResponse response;
 
 	response.statusCode = HTTP_StatusCode::OK;
 	response.body = std::move(fileData);
+
 	response.headers["Content-Length"] = std::to_string(response.body.size());
-	response.headers["Content-Body"] = "text/html";
+	response.headers["Content-Type"] = "text/html";
 	
 	return response;
 }
@@ -244,6 +247,7 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         std::cout << "Pair not found." << "\n";
         // runNormal();
     }
+	return serveStaticFile(request, *bestMatchRouteConfig);
     return constructResponse(200);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
@@ -253,5 +257,5 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     // 6. Serve static file
     // 7. Return proper status
 
-	return serveStaticFile(request, *bestMatchRouteConfig);
+	
 }
