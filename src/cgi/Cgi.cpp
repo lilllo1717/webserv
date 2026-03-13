@@ -25,6 +25,7 @@
 // send response to client
 
 #include "Cgi.hpp"
+#include <sys/wait.h>
 
 void CgiHandler::closePipes()
 {
@@ -160,7 +161,20 @@ bool CgiHandler::createChildProcess()
     }
     else
     {
+        close(_stdInPipe[0]);
+        close(_stdOutPipe[1]);
         _childPid = pid;
+        write(_stdInPipe[1], _request.body.data(), _request.body.size());
+        close(_stdInPipe[1]);
+        std::string output;
+        char temp_buffer[1024];
+        ssize_t bytes_read;
+        while ((bytes_read = read(_stdOutPipe[0], temp_buffer, sizeof(temp_buffer))) > 0)
+            output.append(temp_buffer, bytes_read);
+        std::cout << "Bytes read from CGI: " << bytes_read << "\n";
+        std::cout << "CGI output: " << temp_buffer << "\n";
+        close(_stdOutPipe[0]);
+        waitpid(_childPid, nullptr, 0);
         // executeParent();
     }
     return true;
