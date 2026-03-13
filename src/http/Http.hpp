@@ -87,6 +87,8 @@ enum class HTTP_StatusCode : int
     
 };
 
+
+
 struct RequestMatchResult
 {
     const Server* selectedServer = nullptr;
@@ -94,6 +96,7 @@ struct RequestMatchResult
     std::string stringifiedMethod;
     std::string remoteAddress;
     serverConfig selectedServerCon;
+    std::string interpreter;
 
 };
 
@@ -232,5 +235,6 @@ class Router
 void trim(std::string& header);
 bool is_hex(char c);
 void lowerLettersInHeaders(std::string& header);
+HttpResponse constructResponse(int statusCode);
 
 #endif

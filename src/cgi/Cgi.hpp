@@ -33,6 +33,8 @@ class CgiHandler
 
         std::vector<std::string>    _envStrings;
         std::vector<char*> _envp;
+        std::string _scriptPath;
+        std::string _interpreter;
 
         const HttpRequest&   _request;
         const routeConfig&  _config;
@@ -45,10 +47,14 @@ class CgiHandler
         CgiHandler& operator=(const CgiHandler&) = delete;
 
 
-        void executeCgi();
+        HttpResponse executeCgi();
 
     private:
         void buildEnvVars();
+        bool createPipes();
+        bool createChildProcess();
+        bool executeChild();
+        void closePipes();
 
 };
 

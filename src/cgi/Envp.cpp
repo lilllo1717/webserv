@@ -2,12 +2,21 @@
 #include "../http/Http.hpp"
 
 
-void CgiHandler::executeCgi()
-{
-    std::cout << "entrred executeCgi" << "\n";
-    buildEnvVars();
-    // return 
-}
+// HttpResponse CgiHandler::executeCgi()
+// {
+//     try
+//     {
+//         std::cout << "entrred executeCgi" << "\n";
+//         buildEnvVars();
+//     }
+//     catch(const std::exception& e)
+//     {
+//         std::cerr << e.what() << '\n';
+//         return constructResponse(500);
+//     }
+    
+//     // return 
+// }
 
 std::string getServerName(std::string host)
 {
@@ -41,10 +50,11 @@ void CgiHandler::buildEnvVars()
     _envStrings.push_back("SERVER_SOFTWARE=webserv/1.0");
     _envStrings.push_back("SCRIPT_NAME=" + _request.uri_path);
 
-    std::string scriptPath = _request.uri_path;
-    if (scriptPath.find(_config.path) == 0)
-        scriptPath = scriptPath.substr(_config.path.size());
-    _envStrings.push_back("SCRIPT_FILENAME=" + _config.rootDir + scriptPath);
+    _scriptPath = _request.uri_path;
+    if (_scriptPath.find(_config.path) == 0)
+        _scriptPath = _scriptPath.substr(_config.path.size());
+    _scriptPath = _config.rootDir + _scriptPath;
+    _envStrings.push_back("SCRIPT_FILENAME=" + _config.rootDir + _scriptPath);
 
     for (const auto& header: _request.headers)
     {
@@ -63,4 +73,10 @@ void CgiHandler::buildEnvVars()
     {
         std::cout << envvar << "\n";
     }
+
+    for (std::string& envvar : _envStrings)
+        _envp.push_back(envvar.data());
+    _envp.push_back(nullptr);
+
+
 }
