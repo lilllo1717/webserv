@@ -214,7 +214,11 @@ void Manager::run()
 
                     HttpResponse response = _router.handleRequest(request, listener, _clientFdToRemoteAddress[client_fd]);
                     //generate response;
-
+					std::string rawResponse = serializeHttpResponse(response);
+					
+					// DEBUG: To check if serialize function works
+					std::cout << "----RAW RESPONSE----\n";
+					std::cout << rawResponse << "\n";
                 }
 
             }
