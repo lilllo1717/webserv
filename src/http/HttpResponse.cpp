@@ -217,9 +217,9 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
     if (it != bestMatchRouteConfig->cgi.end())
     {
-        CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
-        cgi.executeCgi();
+        CgiHandler cgi(request, response, *bestMatchRouteConfig, matchResult);
         std::cout << "Pair Found, execute CGI." << "\n";
+        cgi.executeCgi();
         // runcgi();
     }
     else

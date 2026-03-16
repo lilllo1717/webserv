@@ -41,6 +41,7 @@ void CgiHandler::buildEnvVars()
     else
         _envStrings.push_back("QUERY_STRING=");
     _envStrings.push_back("PATH_INFO=");
+    _envStrings.push_back("REDIRECT_STATUS=200");
     _envStrings.push_back("PATH_TRANSLATED=");
     _envStrings.push_back("REMOTE_ADDR=" + _configResult.remoteAddress);
     _envStrings.push_back("REMOTE_HOST=" + _configResult.remoteAddress);
@@ -49,12 +50,15 @@ void CgiHandler::buildEnvVars()
     _envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
     _envStrings.push_back("SERVER_SOFTWARE=webserv/1.0");
     _envStrings.push_back("SCRIPT_NAME=" + _request.uri_path);
+    // std::cout << "SCRIPT_NAME=" << _request.uri_path << "\n";
+
 
     _scriptPath = _request.uri_path;
     if (_scriptPath.find(_config.path) == 0)
         _scriptPath = _scriptPath.substr(_config.path.size());
     _scriptPath = _config.rootDir + _scriptPath;
-    _envStrings.push_back("SCRIPT_FILENAME=" + _config.rootDir + _scriptPath);
+    _envStrings.push_back("SCRIPT_FILENAME=" + _scriptPath);
+    std::cout << "!!!SCRIPT_FILENAME=" << _config.rootDir << _scriptPath << "\n";
 
     for (const auto& header: _request.headers)
     {

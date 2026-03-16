@@ -35,14 +35,16 @@ class CgiHandler
         std::vector<char*> _envp;
         std::string _scriptPath;
         std::string _interpreter;
+        std::string _cgiOutput;
 
         const HttpRequest&   _request;
+        const HttpResponse&   _response;
         const routeConfig&  _config;
         const RequestMatchResult& _configResult;
 
     public:
         CgiHandler() = delete;
-        CgiHandler(const HttpRequest& request, const routeConfig& config, const RequestMatchResult& configResult);
+        CgiHandler(const HttpRequest& request, const HttpResponse& response, const routeConfig& config, const RequestMatchResult& configResult);
         virtual ~CgiHandler();
         CgiHandler& operator=(const CgiHandler&) = delete;
 
@@ -54,6 +56,8 @@ class CgiHandler
         bool createPipes();
         bool createChildProcess();
         bool executeChild();
+        bool executeParent();
+        bool parseCgiOutputIntoHttpResponse();
         void closePipes();
 
 };

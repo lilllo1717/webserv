@@ -35,7 +35,7 @@ void CgiHandler::closePipes()
     close(_stdOutPipe[1]);
 }
 
-CgiHandler::CgiHandler(const HttpRequest& request, const routeConfig& config, const RequestMatchResult& configResult)
+CgiHandler::CgiHandler(const HttpRequest& request, const HttpResponse& response, const routeConfig& config, const RequestMatchResult& configResult)
     :   _childPid(-1),
         _stdInPipe{-1, -1},
         _stdOutPipe{-1, -1},
@@ -44,6 +44,7 @@ CgiHandler::CgiHandler(const HttpRequest& request, const routeConfig& config, co
         _scriptPath(""),
         _interpreter(""),
         _request(request),
+        _response(response),
         _config(config),
         _configResult(configResult)
   
@@ -64,7 +65,12 @@ CgiHandler::~CgiHandler()
         close(_stdOutPipe[1]);
     std::cout << "CgiHandler Destructor called.\n";
 }
+bool CgiHandler::parseCgiOutputIntoHttpResponse()
+{
+    std::cout << "parsing body into response" << "\n";
 
+    return true;
+}
 
 HttpResponse CgiHandler::executeCgi()
 {
@@ -75,6 +81,8 @@ HttpResponse CgiHandler::executeCgi()
         if (!createPipes())
             return constructResponse(500);
         if (!createChildProcess())
+            return constructResponse(500);
+        if (!parseCgiOutputIntoHttpResponse())
             return constructResponse(500);
     }
     catch(const std::exception& e)
@@ -143,6 +151,24 @@ bool CgiHandler::executeChild()
 
 }
 
+bool CgiHandler::executeParent()
+{
+    std::cout << "executing parent" << "\n";
+    close(_stdInPipe[0]);
+    close(_stdOutPipe[1]);
+    write(_stdInPipe[1], _request.body.data(), _request.body.size());
+    close(_stdInPipe[1]);
+    char temp_buffer[1024];
+    ssize_t bytes_read;
+    while ((bytes_read = read(_stdOutPipe[0], temp_buffer, sizeof(temp_buffer))) > 0)
+        _cgiOutput.append(temp_buffer, bytes_read);
+    // std::cout << "Bytes read from CGI: " << bytes_read << "\n";
+    std::cout << "CGI output: " << _cgiOutput << "\n";
+    close(_stdOutPipe[0]);
+    waitpid(_childPid, nullptr, 0);
+    return true;
+}
+
 bool CgiHandler::createChildProcess()
 {
     std::cout << "fokring child" << "\n";
@@ -161,21 +187,8 @@ bool CgiHandler::createChildProcess()
     }
     else
     {
-        close(_stdInPipe[0]);
-        close(_stdOutPipe[1]);
         _childPid = pid;
-        write(_stdInPipe[1], _request.body.data(), _request.body.size());
-        close(_stdInPipe[1]);
-        std::string output;
-        char temp_buffer[1024];
-        ssize_t bytes_read;
-        while ((bytes_read = read(_stdOutPipe[0], temp_buffer, sizeof(temp_buffer))) > 0)
-            output.append(temp_buffer, bytes_read);
-        std::cout << "Bytes read from CGI: " << bytes_read << "\n";
-        std::cout << "CGI output: " << temp_buffer << "\n";
-        close(_stdOutPipe[0]);
-        waitpid(_childPid, nullptr, 0);
-        // executeParent();
+        executeParent();
     }
     return true;
 }
