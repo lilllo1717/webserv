@@ -68,6 +68,7 @@ CgiHandler::~CgiHandler()
 
 bool CgiHandler::parseOneCGIHeader(std::string& header_line)
 {
+    std::cout << "CGiI header_line : [" << header_line << "\n";
     auto col_pos = header_line.find(':');
     if (col_pos == std::string::npos)
         return false;
@@ -82,18 +83,29 @@ bool CgiHandler::parseOneCGIHeader(std::string& header_line)
 
 bool CgiHandler::parseCGIHeader(std::string& buffer)
 {
-    while (true)
-    {
+
+        std::cout << "parsing CGI headers" << "\n";
+        std::cout << "buffer:  [" <<  buffer << "]\n";
+        size_t to_add = 2;
         auto pos = buffer.find("\r\n");
+        // std::cout << "pos " <<  pos << "\n";
         if (pos == std::string::npos)
-            return false;
+        {
+            pos = buffer.find("\n");
+            std::cout << "pos " <<  pos << "\n";
+            if (pos == std::string::npos)
+                return parseOneCGIHeader(buffer);
+            else
+                to_add = 1;
+        }
+
         if (pos == 0)
             return true;
         std::string header_line = buffer.substr(0, pos);
+        buffer.erase(pos + to_add);
         if (parseOneCGIHeader(header_line) == false)
             return false;
-    }
-    return true;
+    return parseCGIHeader(buffer);
 }
 
 bool CgiHandler::parseCgiOutputIntoHttpResponse()
@@ -195,7 +207,6 @@ bool CgiHandler::executeChild()
         std::cerr << "du2 IN failed: " << strerror(errno) << "\n";
         closePipes();
         exit(1);
-        
     }
 
     if (dup2(_stdOutPipe[1], STDOUT_FILENO) == -1)
