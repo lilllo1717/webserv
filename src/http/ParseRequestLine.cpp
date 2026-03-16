@@ -90,10 +90,17 @@ ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& c
     request.uri_path = requestLine.substr(start_uri, end_uri - start_uri);
     std::cout << "request.uri_path: [" << request.uri_path << "]\n";
     if (validateUri(request.uri_path) == PARSE_ERROR)
+    {
+        std::cout << "validateUri(request.uri_path) returned error" << "\n";
+
         return PARSE_ERROR;
+    }
     request.uri_query = requestLine.substr(start_query, end_query - start_query);
     if (validateUri(request.uri_query) == PARSE_ERROR)
+    {
+        std::cout << "validateUri(request.uri_query) returned error" << "\n";
         return PARSE_ERROR;
+    }
     // end_schema = cursor.get_position();
     // cursor.pos += 1;
 

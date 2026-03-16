@@ -27,15 +27,6 @@
 //     }
 // }
 
-std::string getHostName(std::string server_host)
-{
-
-    auto pos = server_host.find(':');
-    if (pos == std::string::npos)
-        return server_host;
-    return server_host.substr(0, pos);
-}
-
 HttpResponse constructResponse(int statusCode)
 {
     HttpResponse response;
@@ -46,6 +37,26 @@ HttpResponse constructResponse(int statusCode)
     return response;
 
 }
+
+std::string getHostName(std::string server_host)
+{
+
+    auto pos = server_host.find(':');
+    if (pos == std::string::npos)
+        return server_host;
+    return server_host.substr(0, pos);
+}
+
+// HttpResponse constructResponse(int statusCode)
+// {
+//     HttpResponse response;
+
+//     response.statusCode = static_cast<HTTP_StatusCode>(statusCode);
+//     std::cout << reasonPhrase(response.statusCode) << "\n";
+
+//     return response;
+
+// }
 
 bool matchRouteWithConfig(const std::string& requestUri, const std::string& configUri)
 {
@@ -181,6 +192,8 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
                 << selectedServer->getListenPort() << "\n";
     }
     const routeConfig* bestMatchRouteConfig = NULL;
+    serverConfig selectedServerConfig = selectedServer->getConfig();
+
     size_t max_uri_len = 0;
     // std::cout << "route.path" <<  selectedServer->getConfig().routes << "\n";
 
@@ -234,6 +247,7 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         it != cgi.end();
         ++it)
     {
+        matchResult.interpreter = it->second;
         std::cout << "CGI extension: " << it->first
                 << " interpreter: " << it->second << "\n";
     }
@@ -241,11 +255,13 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     matchResult.bestMatchRouteConfig = bestMatchRouteConfig;
     matchResult.stringifiedMethod = methodStringed;
     matchResult.remoteAddress = remoteAddr;
+    matchResult.selectedServerCon = selectedServerConfig;
     std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
     if (it != bestMatchRouteConfig->cgi.end())
     {
-        CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
+        CgiHandler cgi(request, response, *bestMatchRouteConfig, matchResult);
         std::cout << "Pair Found, execute CGI." << "\n";
+        cgi.executeCgi();
         // runcgi();
     }
     else
