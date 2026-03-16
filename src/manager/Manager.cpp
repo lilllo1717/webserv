@@ -216,6 +216,7 @@ void Manager::run()
                     //generate response;
 					std::string rawResponse = serializeHttpResponse(response);
 					
+					send(client_fd, rawResponse.c_str(), rawResponse.size(), 0);
 					// DEBUG: To check if serialize function works
 					std::cout << "----RAW RESPONSE----\n";
 					std::cout << rawResponse << "\n";
