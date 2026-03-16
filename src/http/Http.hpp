@@ -243,23 +243,23 @@ constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
 {
     switch (status)
     {
-        case HTTP_StatusCode::OK: return "OK";
-        case HTTP_StatusCode::CREATED: return "Created";
-        case HTTP_StatusCode::NO_CONTENT: return "No Content";
-        case HTTP_StatusCode::MOVED_PERMANENTLY: return "Moved Permanently";
-        case HTTP_StatusCode::FOUND: return "Found";
-        case HTTP_StatusCode::BAD_REQUEST: return "Bad Request";
-        case HTTP_StatusCode::FORBIDDEN: return "Forbidden";
-        case HTTP_StatusCode::NOT_FOUND: return "Not Found";
-        case HTTP_StatusCode::METHOD_NOT_ALLOWED: return "Method Not Allowed";
-        case HTTP_StatusCode::PAYLOAD_TOO_LARGE: return "Payload Too Large";
-        case HTTP_StatusCode::URI_TOO_LONG: return "URI Too Long";
-        case HTTP_StatusCode::UNPROCESSABLE_ENTITY: return "Unprocessable Entity";
-        case HTTP_StatusCode::INTERNAL_SERVER_ERROR: return "Internal Server Error";
-        case HTTP_StatusCode::NOT_IMPLEMENTED: return "Not Implemented";
-        case HTTP_StatusCode::BAD_GATEWAY: return "Bad Gateway";
-        case HTTP_StatusCode::GATEWAY_TIMEOUT: return "Gateway Timeout";
-        default: return "Unknown";
+        case HTTP_StatusCode::OK: return "200 OK";
+        case HTTP_StatusCode::CREATED: return "201 Created";
+        case HTTP_StatusCode::NO_CONTENT: return "204 No Content";
+        case HTTP_StatusCode::MOVED_PERMANENTLY: return "301 Moved Permanently";
+        case HTTP_StatusCode::FOUND: return "302 Found";
+        case HTTP_StatusCode::BAD_REQUEST: return "400 Bad Request";
+        case HTTP_StatusCode::FORBIDDEN: return "403 Forbidden";
+        case HTTP_StatusCode::NOT_FOUND: return "404 Not Found";
+        case HTTP_StatusCode::METHOD_NOT_ALLOWED: return "405 Method Not Allowed";
+        case HTTP_StatusCode::PAYLOAD_TOO_LARGE: return "413 Payload Too Large";
+        case HTTP_StatusCode::URI_TOO_LONG: return "414 URI Too Long";
+        case HTTP_StatusCode::UNPROCESSABLE_ENTITY: return "422 Unprocessable Entity";
+        case HTTP_StatusCode::INTERNAL_SERVER_ERROR: return "500 Internal Server Error";
+        case HTTP_StatusCode::NOT_IMPLEMENTED: return "501 Not Implemented";
+        case HTTP_StatusCode::BAD_GATEWAY: return "502 Bad Gateway";
+        case HTTP_StatusCode::GATEWAY_TIMEOUT: return "504 Gateway Timeout";
+        default: return "200 OK";
     }
 };
 

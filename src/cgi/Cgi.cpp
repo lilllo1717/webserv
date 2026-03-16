@@ -143,35 +143,35 @@ bool CgiHandler::parseCgiOutputIntoHttpResponse()
 
 HttpResponse CgiHandler::executeCgi()
 {
-    HttpResponse response;
+    // HttpResponse response;
     try
     {
         std::cout << "entrred executeCgi" << "\n";
         buildEnvVars();
         if (!createPipes())
         {
-            response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(response);
+            _response.statusCode = static_cast<HTTP_StatusCode>(500);
+            return constructResponse(_response);
         }
         if (!createChildProcess())
         {
-            response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(response);
+            _response.statusCode = static_cast<HTTP_StatusCode>(500);
+            return constructResponse(_response);
         }
         if (!parseCgiOutputIntoHttpResponse())
         {
-            response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(response);
+            _response.statusCode = static_cast<HTTP_StatusCode>(500);
+            return constructResponse(_response);
         }
     }
     catch(const std::exception& e)
     {
         std::cerr << "CGI error." << e.what() << '\n';
-        response.statusCode = static_cast<HTTP_StatusCode>(500);
-        return constructResponse(response);
+        _response.statusCode = static_cast<HTTP_StatusCode>(500);
+        return constructResponse(_response);
     }
     
-    return response;
+    return _response;
 
 }
 

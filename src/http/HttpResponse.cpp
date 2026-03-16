@@ -29,9 +29,13 @@
 
 HttpResponse constructResponse(HttpResponse& response)
 {
-
-    std::cout << reasonPhrase(response.statusCode) << "\n";
-
+    std::cout << "HTTP/1.1" << "\n";
+    std::cout << "Status: " << reasonPhrase(response.statusCode) << "\n";
+    for (const auto head: response.headers)
+        std::cout << head.first << ": " << head.second << "\n";
+    std::string bodyy;
+    bodyy.append(reinterpret_cast<const char*>(response.body.data()), response.body.size());
+    std::cout << "Body: " << bodyy << "\n";
     return response;
 
 }
@@ -44,17 +48,6 @@ std::string getHostName(std::string server_host)
         return server_host;
     return server_host.substr(0, pos);
 }
-
-// HttpResponse constructResponse(int statusCode)
-// {
-//     HttpResponse response;
-
-//     response.statusCode = static_cast<HTTP_StatusCode>(statusCode);
-//     std::cout << reasonPhrase(response.statusCode) << "\n";
-
-//     return response;
-
-// }
 
 bool matchRouteWithConfig(const std::string& requestUri, const std::string& configUri)
 {
