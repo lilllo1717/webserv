@@ -86,26 +86,29 @@ bool CgiHandler::parseCGIHeader(std::string& buffer)
 
         std::cout << "parsing CGI headers" << "\n";
         std::cout << "buffer:  [" <<  buffer << "]\n";
-        size_t to_add = 2;
-        auto pos = buffer.find("\r\n");
-        // std::cout << "pos " <<  pos << "\n";
-        if (pos == std::string::npos)
-        {
-            pos = buffer.find("\n");
-            std::cout << "pos " <<  pos << "\n";
-            if (pos == std::string::npos)
-                return parseOneCGIHeader(buffer);
-            else
-                to_add = 1;
-        }
 
-        if (pos == 0)
-            return true;
-        std::string header_line = buffer.substr(0, pos);
-        buffer.erase(pos + to_add);
-        if (parseOneCGIHeader(header_line) == false)
+        if (parseOneCGIHeader(buffer) == false)
             return false;
-    return parseCGIHeader(buffer);
+        // size_t to_add = 2;
+        // auto pos = buffer.find("\r\n");
+        // // std::cout << "pos " <<  pos << "\n";
+        // if (pos == std::string::npos)
+        // {
+        //     pos = buffer.find("\n");
+        //     std::cout << "pos " <<  pos << "\n";
+        //     if (pos == std::string::npos)
+        //         return parseOneCGIHeader(buffer);
+        //     else
+        //         to_add = 1;
+        // }
+
+        // if (pos == 0)
+        //     return true;
+        // std::string header_line = buffer.substr(0, pos);
+        // buffer.erase(pos + to_add);
+        // if (parseOneCGIHeader(header_line) == false)
+        //     return false;
+    return true;
 }
 
 bool CgiHandler::parseCgiOutputIntoHttpResponse()
