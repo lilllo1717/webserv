@@ -38,13 +38,13 @@ class CgiHandler
         std::string _cgiOutput;
 
         const HttpRequest&   _request;
-        const HttpResponse&   _response;
+        HttpResponse   _response;
         const routeConfig&  _config;
         const RequestMatchResult& _configResult;
 
     public:
         CgiHandler() = delete;
-        CgiHandler(const HttpRequest& request, const HttpResponse& response, const routeConfig& config, const RequestMatchResult& configResult);
+        CgiHandler(const HttpRequest& request, const routeConfig& config, const RequestMatchResult& configResult);
         virtual ~CgiHandler();
         CgiHandler& operator=(const CgiHandler&) = delete;
 
@@ -59,6 +59,8 @@ class CgiHandler
         bool executeParent();
         bool parseCgiOutputIntoHttpResponse();
         void closePipes();
+        bool parseCGIHeader(std::string& buffer);
+        bool parseOneCGIHeader(std::string&  header_line);
 
 };
 

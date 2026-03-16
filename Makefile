@@ -17,7 +17,8 @@ SRCS            = src/main.cpp \
 				  src/configParser/parser.cpp \
 				  src/configParser/tokenizer.cpp \
 				  src/cgi/Cgi.cpp \
-				  src/cgi/Envp.cpp
+				  src/cgi/Envp.cpp \
+				  
 
 
 

@@ -235,7 +235,8 @@ class Router
 void trim(std::string& header);
 bool is_hex(char c);
 void lowerLettersInHeaders(std::string& header);
-HttpResponse constructResponse(int statusCode);
+HttpResponse constructResponse(HttpResponse& response);
+
 
 
 constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
@@ -260,7 +261,7 @@ constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
         case HTTP_StatusCode::GATEWAY_TIMEOUT: return "Gateway Timeout";
         default: return "Unknown";
     }
-}
+};
 
 std::string	serializeHttpResponse(const HttpResponse& response);
 

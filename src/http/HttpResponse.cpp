@@ -27,11 +27,9 @@
 //     }
 // }
 
-HttpResponse constructResponse(int statusCode)
+HttpResponse constructResponse(HttpResponse& response)
 {
-    HttpResponse response;
 
-    response.statusCode = static_cast<HTTP_StatusCode>(statusCode);
     std::cout << reasonPhrase(response.statusCode) << "\n";
 
     return response;
@@ -91,6 +89,7 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
 HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
 {
 	std::string	fullPath;
+    HttpResponse response;
 
 	if (request.uri_path == "/")
 	{
@@ -108,7 +107,8 @@ HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& rout
 	if (!file)
 	{
 		std::cout << "File not found!\n";
-		return constructResponse(404);
+        response.statusCode = static_cast<HTTP_StatusCode>(404);
+		return constructResponse(response);
 	}
 
 	file.seekg(0, std::ios::end);
@@ -118,9 +118,11 @@ HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& rout
 	std::vector<uint8_t> fileData(fileSize);
 
 	if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
-		return constructResponse(500);
+    {
+        response.statusCode = static_cast<HTTP_StatusCode>(500);
+		return constructResponse(response);
+    }
 
-	HttpResponse response;
 
 	response.statusCode = HTTP_StatusCode::OK;
 	response.body = std::move(fileData);
@@ -168,7 +170,8 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     {
         std::cout << "no host name"  << "\n";
 
-        return constructResponse(400);
+        response.statusCode = static_cast<HTTP_StatusCode>(400);
+        return constructResponse(response);
     }
     const Server* selectedServer = listener.defaultServer;
     std::string hostName = getHostName(request.host);
@@ -215,8 +218,8 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     if (bestMatchRouteConfig == NULL)
     {
         std::cout << "error ar matching uri "  "\n";
-
-        return constructResponse(404);
+        response.statusCode = static_cast<HTTP_StatusCode>(404);
+        return constructResponse(response);
         
     }
     std::cout << "bestMatchRouteConfig uri: " << bestMatchRouteConfig->path << "\n";
@@ -227,13 +230,16 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
          == bestMatchRouteConfig->httpMethods.end())
          {
             // std::cout << "no method match." << "\n";
-            return constructResponse(405);
+            response.statusCode = static_cast<HTTP_StatusCode>(405);
+            return constructResponse(response);
          }
     if (bestMatchRouteConfig->isRedirect == true)
     {
         response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
         request.headers["location"] = bestMatchRouteConfig->uploadPath;
-        return constructResponse(bestMatchRouteConfig->redirectCode);
+        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
+        return constructResponse(response);
+
     }
     std::string extensionFromRequest = extractExtensionFromUri(request);
     const std::map<std::string, std::string>& cgi = bestMatchRouteConfig->cgi;
@@ -259,9 +265,9 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
     if (it != bestMatchRouteConfig->cgi.end())
     {
-        CgiHandler cgi(request, response, *bestMatchRouteConfig, matchResult);
+        CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
         std::cout << "Pair Found, execute CGI." << "\n";
-        cgi.executeCgi();
+        response = cgi.executeCgi();
         // runcgi();
     }
     else
@@ -269,8 +275,8 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         std::cout << "Pair not found." << "\n";
         // runNormal();
     }
-	return serveStaticFile(request, *bestMatchRouteConfig);
-    return constructResponse(200);
+	// return serveStaticFile(request, *bestMatchRouteConfig);
+    return constructResponse(response);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
     // 3. Check allowed methods -> done
