@@ -86,6 +86,78 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
     return false;
 }
 
+// TODO: director file index, autoindexing, error pages, methods verification, POST requests, upload test
+
+// Converts URI (filesystem path)
+std::string	resolvePath(const HttpRequest& request, const routeConfig& route)
+{
+	if (!route.rootDir.empty())
+		return route.rootDir + request.uri_path;
+	return request.uri_path;
+}
+
+// Check if path is a directory
+bool isDirectory(const std::string& path)
+{
+	struct stat s;
+
+	if (stat(path.c_str(), &s) != 0)
+		return false;
+	return S_ISDIR(s.st_mode);
+}
+
+// Handles index directive: index.html
+std::string	resolveIndexFile(const std::string& dirPath, const routeConfig& route)
+{
+	for (size_t i = 0; i < route.index.size(); i++)
+	{
+		std::string fullPath = dirPath + "/" + route.index[i];
+
+		std::ifstream file(fullPath.c_str());
+		if (file.good())
+			return fullPath;
+	}
+	return "";
+}
+
+HttpResponse buildAutoindex(const std::string& path)
+{
+	HttpResponse response;
+
+	DIR* dir = opendir(path.c_str());
+	if (!dir)
+	{
+		response.statusCode = static_cast<HTTP_StatusCode>(500);
+		return constructResponse(response);
+	}
+
+	std::ostringstream html;
+
+	html << "<html><body>";
+	html << "<h1>Index of " << path << "</h1><ul>";
+
+	struct dirent* entry;
+	while((entry = readdir(dir)) != NULL)
+	{
+		html	<< "<li><a href=\""
+				<< entry->d_name
+				<< "\">"
+				<< entry->d_name
+				<< "</a></li>";	
+	}
+	html << "</ul></body></html>";
+	closedir(dir);
+
+	std::string	body = html.str();
+
+	response.statusCode = HTTP_StatusCode::OK;
+	response.body.assign(body.begin(), body.end());
+	response.headers["Content-Type"] = "text/html";
+	response.headers["Content-Length"] = std::to_string(response.body.size());
+	
+	return response;
+}
+
 HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
 {
 	std::string	fullPath;
@@ -275,7 +347,7 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         std::cout << "Pair not found." << "\n";
         // runNormal();
     }
-	// return serveStaticFile(request, *bestMatchRouteConfig);
+	return serveStaticFile(request, *bestMatchRouteConfig);
     return constructResponse(response);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
