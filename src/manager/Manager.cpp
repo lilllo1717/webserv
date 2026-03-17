@@ -216,8 +216,17 @@ void Manager::run()
                     //generate response;
 					std::string rawResponse = serializeHttpResponse(response);
 					
-					send(client_fd, rawResponse.c_str(), rawResponse.size(), 0);
+					ssize_t sent = send(client_fd, rawResponse.c_str(), rawResponse.size(), 0);
 					// DEBUG: To check if serialize function works
+                    if (sent < 0)
+                    {
+                        std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
+                    }
+
+                    close(client_fd);
+                    removeClient(client_fd);
+                    _poll_fds.erase(_poll_fds.begin() + i);
+                    --i;
 					std::cout << "----RAW RESPONSE----\n";
 					std::cout << rawResponse << "\n";
                 }

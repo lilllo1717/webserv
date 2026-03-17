@@ -79,35 +79,35 @@ bool CgiHandler::parseOneCGIHeader(std::string& header_line)
     _response.headers[headers_key] = headers_val;
     std::cout << "CGI[" << headers_key << "]" << ":" << headers_val << "\n";
     return true;
-}
+}    // Convert entire body string → vector<uint8_t>
 
 bool CgiHandler::parseCGIHeader(std::string& buffer)
 {
 
-        std::cout << "parsing CGI headers" << "\n";
-        std::cout << "buffer:  [" <<  buffer << "]\n";
+    std::cout << "parsing CGI headers" << "\n";
+    std::cout << "buffer:  [" <<  buffer << "]\n";
+    while (!buffer.empty())
+    {
+        auto pos = buffer.find("\r\n");
+        size_t to_add = 2;
+        // std::cout << "pos " <<  pos << "\n";
+        if (pos == std::string::npos)
+        {
+            pos = buffer.find("\n");
+            to_add = 1;
+            std::cout << "pos " <<  pos << "\n";
+            if (pos == std::string::npos)
+                return parseOneCGIHeader(buffer);
+                
+        }
 
-        if (parseOneCGIHeader(buffer) == false)
+        std::string header_line = buffer.substr(0, pos);
+        buffer.erase(0, pos + to_add);
+        if (header_line.empty())
+            return true;
+        if (parseOneCGIHeader(header_line) == false)
             return false;
-        // size_t to_add = 2;
-        // auto pos = buffer.find("\r\n");
-        // // std::cout << "pos " <<  pos << "\n";
-        // if (pos == std::string::npos)
-        // {
-        //     pos = buffer.find("\n");
-        //     std::cout << "pos " <<  pos << "\n";
-        //     if (pos == std::string::npos)
-        //         return parseOneCGIHeader(buffer);
-        //     else
-        //         to_add = 1;
-        // }
-
-        // if (pos == 0)
-        //     return true;
-        // std::string header_line = buffer.substr(0, pos);
-        // buffer.erase(pos + to_add);
-        // if (parseOneCGIHeader(header_line) == false)
-        //     return false;
+    }
     return true;
 }
 
@@ -133,9 +133,14 @@ bool CgiHandler::parseCgiOutputIntoHttpResponse()
     temp_sub_headers = _cgiOutput.substr(0, pos);
     size_t body_start = pos + sep_len;
     temp_body = _cgiOutput.substr(body_start);
-    parseCGIHeader(temp_sub_headers);
-    // Convert entire body string → vector<uint8_t>
+    std::string headers_copy = temp_sub_headers;
+    if (!parseCGIHeader(headers_copy)) {
+        std::cerr << "Failed to parse CGI headers\n";
+    }
+
     _response.body = std::vector<uint8_t>(temp_body.begin(), temp_body.end());
+    _response.headers["Content-Length"] = std::to_string(_response.body.size());
+    _response.closeConnection = true;
     std::cout << "CGI _cgiOutput: " << _cgiOutput << "\n";
 
     std::cout << "CGI headers: " << temp_sub_headers << "\n";
@@ -154,24 +159,24 @@ HttpResponse CgiHandler::executeCgi()
         if (!createPipes())
         {
             _response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(_response);
+            return _response;
         }
         if (!createChildProcess())
         {
             _response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(_response);
+            return _response;
         }
         if (!parseCgiOutputIntoHttpResponse())
         {
             _response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(_response);
+            return _response;
         }
     }
     catch(const std::exception& e)
     {
         std::cerr << "CGI error." << e.what() << '\n';
         _response.statusCode = static_cast<HTTP_StatusCode>(500);
-        return constructResponse(_response);
+        return _response;
     }
     
     return _response;

@@ -243,7 +243,7 @@ constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
 {
     switch (status)
     {
-        case HTTP_StatusCode::OK: return "200 OK";
+        case HTTP_StatusCode::OK: return "OK";
         case HTTP_StatusCode::CREATED: return "201 Created";
         case HTTP_StatusCode::NO_CONTENT: return "204 No Content";
         case HTTP_StatusCode::MOVED_PERMANENTLY: return "301 Moved Permanently";
