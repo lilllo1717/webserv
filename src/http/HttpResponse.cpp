@@ -158,51 +158,109 @@ HttpResponse buildAutoindex(const std::string& path)
 	return response;
 }
 
-HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
+// HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
+// {
+// 	std::string	fullPath;
+//     HttpResponse response;
+
+// 	if (request.uri_path == "/")
+// 	{
+//    		fullPath = route.rootDir + "/" + route.index;
+// 	}
+// 	else
+// 	{
+//     	fullPath = route.rootDir + request.uri_path;
+// 	}
+
+// 	std::cout << "Serving static file: [" << fullPath << "]\n";
+
+// 	std::ifstream file(fullPath.c_str(), std::ios::binary);
+
+// 	if (!file)
+// 	{
+// 		std::cout << "File not found!\n";
+//         response.statusCode = static_cast<HTTP_StatusCode>(404);
+// 		return constructResponse(response);
+// 	}
+
+// 	file.seekg(0, std::ios::end);
+// 	size_t fileSize = static_cast<size_t>(file.tellg());
+// 	file.seekg(0, std::ios::beg);
+
+// 	std::vector<uint8_t> fileData(fileSize);
+
+// 	if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
+//     {
+//         response.statusCode = static_cast<HTTP_StatusCode>(500);
+// 		return constructResponse(response);
+//     }
+
+
+// 	response.statusCode = HTTP_StatusCode::OK;
+// 	response.body = std::move(fileData);
+
+// 	response.headers["Content-Length"] = std::to_string(response.body.size());
+// 	response.headers["Content-Type"] = "text/html";
+	
+// 	return response;
+// }
+
+HttpResponse	serveStaticFile(const std::string& path)
 {
-	std::string	fullPath;
-    HttpResponse response;
-
-	if (request.uri_path == "/")
-	{
-   		fullPath = route.rootDir + "/" + route.index;
-	}
-	else
-	{
-    	fullPath = route.rootDir + request.uri_path;
-	}
-
-	std::cout << "Serving static file: [" << fullPath << "]\n";
-
-	std::ifstream file(fullPath.c_str(), std::ios::binary);
+	HttpResponse	response;
+	std::ifstream file(path.c_str(), std::ios::binary);
 
 	if (!file)
 	{
 		std::cout << "File not found!\n";
-        response.statusCode = static_cast<HTTP_StatusCode>(404);
+		response.statusCode = static_cast<HTTP_StatusCode>(403);
 		return constructResponse(response);
 	}
+	
+	// file.seekg(0, std::ios::end);
+	// size_t fileSize = static_cast<size_t>(file.tellg());
+	// file.seekg(0, std::ios::beg);
 
-	file.seekg(0, std::ios::end);
-	size_t fileSize = static_cast<size_t>(file.tellg());
-	file.seekg(0, std::ios::beg);
+	std::vector<uint8_t> fileData(
+		(std::istreambuf_iterator<char>(file)),
+		std::istreambuf_iterator<char>()
+	);
+	// std::vector<uint8_t> fileData(fileSize);
 
-	std::vector<uint8_t> fileData(fileSize);
-
-	if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
-    {
-        response.statusCode = static_cast<HTTP_StatusCode>(500);
-		return constructResponse(response);
-    }
-
-
+	// if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
+    // {
+    //     response.statusCode = static_cast<HTTP_StatusCode>(500);
+	// 	return constructResponse(response);
+    // }
+	
 	response.statusCode = HTTP_StatusCode::OK;
 	response.body = std::move(fileData);
 
 	response.headers["Content-Length"] = std::to_string(response.body.size());
 	response.headers["Content-Type"] = "text/html";
-	
+
 	return response;
+}
+
+HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
+{
+	HttpResponse response;
+	std::string path = resolvePath(request, route);
+
+	if (isDirectory(path))
+	{
+		std::string indexPath = resolveIndexFile(path, route);
+
+		if (!indexPath.empty())
+			return serveStaticFile(indexPath);
+		
+		if (route.autoindex)
+			return buildAutoindex(path);
+		
+		response.statusCode = static_cast<HTTP_StatusCode>(403);
+		return constructResponse(response);
+	}
+	return serveStaticFile(path);
 }
 
 std::string methodToString(HTTP_Method method)
@@ -347,7 +405,7 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         std::cout << "Pair not found." << "\n";
         // runNormal();
     }
-	return serveStaticFile(request, *bestMatchRouteConfig);
+	return executeRequest(request, *bestMatchRouteConfig);
     return constructResponse(response);
     // 1. Find matching server block (Host header) -> done
     // 2. Find matching location block (URI path) -> done
