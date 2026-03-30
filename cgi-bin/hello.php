@@ -1,8 +1,12 @@
 <?php
-echo "Content-Type: text/plain\r\n";
-echo "\r\n";
-echo "REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD'] . "\n";
-echo "SCRIPT_FILENAME: " . $_SERVER['SCRIPT_FILENAME'] . "\n";
-echo "QUERY_STRING: " . $_SERVER['QUERY_STRING'] . "\n";
-echo "Hello from CGI!\n";
+header('Content-Type: text/html; charset=UTF-8');
 ?>
+<!DOCTYPE html>
+<html>
+<head><title>CGI Test</title></head>
+<body>
+    <h1>CGI Works! 🎉</h1>
+    <p>POST data: <?php echo htmlspecialchars($_POST['name'] ?? 'none'); ?></p>
+    <script>console.log('CGI JavaScript works!');</script>
+</body>
+</html>

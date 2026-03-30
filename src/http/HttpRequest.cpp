@@ -67,7 +67,7 @@ static BodyType establishBodyType(HttpRequest& request)
             return UNSUPPORTED;
         }
         request.contentLength = res_value;
-        std::cout << "Content-Length: " << request.headers["content-length"] << "\n";
+        // std::cout << "Content-Length: " << request.headers["content-length"] << "\n";
         request.parseState = BODY;
         request.bodyType = CONTENT_LENGTH;
         return CONTENT_LENGTH;
@@ -97,7 +97,7 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         }
         else if (request.parseState == HEADERS)
         {
-            std::cout << "entered headers parsing" << "\n";
+            // std::cout << "entered headers parsing" << "\n";
 
             ParseResult parseRes = parseHeader(request);
             if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
@@ -106,12 +106,12 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
                 
                 return parseRes;
             }
-            std::cout << "parsed header" << "\n";
+            // std::cout << "parsed header" << "\n";
             BodyType typeRes = establishBodyType(request);
-            std::cout << "BodyType: " << typeRes << "\n";
+            // std::cout << "BodyType: " << typeRes << "\n";
             if (typeRes == NONE)
             {
-                std::cout << "Body in NONE, parsing is done" << "\n";
+                // std::cout << "Body in NONE, parsing is done" << "\n";
                 request.parseResult = PARSE_DONE;
                 return PARSE_DONE;
             }
@@ -124,7 +124,7 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         else if (request.parseState == BODY)
         {
 
-            std::cout << "entered body parsing" << "\n";
+            // std::cout << "entered body parsing" << "\n";
             ParseResult parseRes = parseBody(request);
             if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
                 return parseRes;

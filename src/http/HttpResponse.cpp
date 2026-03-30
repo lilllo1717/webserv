@@ -261,7 +261,6 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
         CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
         std::cout << "Pair Found, execute CGI." << "\n";
         response = cgi.executeCgi();
-        // runcgi();
     }
     else
     {

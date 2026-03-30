@@ -15,9 +15,9 @@ class Client
     private:
         int         _socketFd;
         size_t      _bytesSent;
-        size_t      _bytesReceived;
+        ssize_t      _bytesReceived;
         // std::string _receiveBuffer;
-        size_t      _bufferLimit;
+        ssize_t      _bufferLimit;
         std::string _sendBuffer;
         size_t      _sendLimit;
         struct HttpRequest _httpRequest;
@@ -33,10 +33,11 @@ class Client
         int getSocketFd() const;
 
         void addBytesSent(size_t bytes);
+        void addBytesReceived(ssize_t bytes);
         size_t getBytesSent() const;
         
         // void addBytesReceived(size_t bytes);
-        // size_t getBytesReceived() const;
+        ssize_t getBytesReceived() const;
 
         // void appendToReceiveBuffer(const std::string& data);
         // const std::string& getReceiveBuffer() const;

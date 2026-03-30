@@ -64,8 +64,10 @@ int main(int argc, char **argv)
         }
 
         manager.buildListenersFromServers();
-        manager.startListenersServers();
-        manager.run();
+        if (manager.startListenersServers() == -1)
+            return 1;
+        if (manager.run() == -1)
+            return 1;
     }
     catch (const std::exception& e)
     {

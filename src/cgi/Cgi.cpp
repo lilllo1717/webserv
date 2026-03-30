@@ -95,7 +95,7 @@ bool CgiHandler::parseCGIHeader(std::string& buffer)
         {
             pos = buffer.find("\n");
             to_add = 1;
-            std::cout << "pos " <<  pos << "\n";
+            // std::cout << "pos " <<  pos << "\n";
             if (pos == std::string::npos)
                 return parseOneCGIHeader(buffer);
                 
@@ -128,7 +128,6 @@ bool CgiHandler::parseCgiOutputIntoHttpResponse()
             _response.body = std::vector<uint8_t>(_cgiOutput.begin(), _cgiOutput.end());
             return true;
         }
-
     }
     temp_sub_headers = _cgiOutput.substr(0, pos);
     size_t body_start = pos + sep_len;

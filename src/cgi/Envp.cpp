@@ -56,9 +56,10 @@ void CgiHandler::buildEnvVars()
     _scriptPath = _request.uri_path;
     if (_scriptPath.find(_config.path) == 0)
         _scriptPath = _scriptPath.substr(_config.path.size());
+
     _scriptPath = _config.rootDir + _scriptPath;
     _envStrings.push_back("SCRIPT_FILENAME=" + _scriptPath);
-    std::cout << "!!!SCRIPT_FILENAME=" << _config.rootDir << _scriptPath << "\n";
+    std::cout << "!!!SCRIPT_FILENAME=" << _scriptPath << "\n";
 
     for (const auto& header: _request.headers)
     {
