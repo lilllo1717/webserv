@@ -109,14 +109,15 @@ bool isDirectory(const std::string& path)
 // Handles index directive: index.html
 std::string	resolveIndexFile(const std::string& dirPath, const routeConfig& route)
 {
-	for (size_t i = 0; i < route.index.size(); i++)
-	{
-		std::string fullPath = dirPath + "/" + route.index[i];
+	if (route.index.empty())
+		return "";
 
-		std::ifstream file(fullPath.c_str());
-		if (file.good())
-			return fullPath;
-	}
+	std::string fullPath = dirPath + "/" + route.index;
+
+	std::ifstream file(fullPath.c_str());
+	if (file.good())
+		return fullPath;
+
 	return "";
 }
 
@@ -155,6 +156,32 @@ HttpResponse buildAutoindex(const std::string& path)
 	response.headers["Content-Type"] = "text/html";
 	response.headers["Content-Length"] = std::to_string(response.body.size());
 	
+	return response;
+}
+
+HttpResponse	serveStaticFile(const std::string& path)
+{
+	HttpResponse	response;
+	std::ifstream file(path.c_str(), std::ios::binary);
+
+	if (!file)
+	{
+		std::cout << "File not found!\n";
+		response.statusCode = static_cast<HTTP_StatusCode>(403);
+		return constructResponse(response);
+	}
+	
+	std::vector<uint8_t> fileData(
+		(std::istreambuf_iterator<char>(file)),
+		std::istreambuf_iterator<char>()
+	);
+	
+	response.statusCode = HTTP_StatusCode::OK;
+	response.body = std::move(fileData);
+
+	response.headers["Content-Length"] = std::to_string(response.body.size());
+	response.headers["Content-Type"] = "text/html";
+
 	return response;
 }
 
@@ -204,43 +231,6 @@ HttpResponse buildAutoindex(const std::string& path)
 	
 // 	return response;
 // }
-
-HttpResponse	serveStaticFile(const std::string& path)
-{
-	HttpResponse	response;
-	std::ifstream file(path.c_str(), std::ios::binary);
-
-	if (!file)
-	{
-		std::cout << "File not found!\n";
-		response.statusCode = static_cast<HTTP_StatusCode>(403);
-		return constructResponse(response);
-	}
-	
-	// file.seekg(0, std::ios::end);
-	// size_t fileSize = static_cast<size_t>(file.tellg());
-	// file.seekg(0, std::ios::beg);
-
-	std::vector<uint8_t> fileData(
-		(std::istreambuf_iterator<char>(file)),
-		std::istreambuf_iterator<char>()
-	);
-	// std::vector<uint8_t> fileData(fileSize);
-
-	// if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
-    // {
-    //     response.statusCode = static_cast<HTTP_StatusCode>(500);
-	// 	return constructResponse(response);
-    // }
-	
-	response.statusCode = HTTP_StatusCode::OK;
-	response.body = std::move(fileData);
-
-	response.headers["Content-Length"] = std::to_string(response.body.size());
-	response.headers["Content-Type"] = "text/html";
-
-	return response;
-}
 
 HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
 {
