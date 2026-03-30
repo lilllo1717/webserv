@@ -121,7 +121,7 @@ std::string	resolveIndexFile(const std::string& dirPath, const routeConfig& rout
 	return "";
 }
 
-HttpResponse buildAutoindex(const std::string& path)
+HttpResponse buildAutoindex(const std::string& path, const std::string& uriPath)
 {
 	HttpResponse response;
 
@@ -137,11 +137,18 @@ HttpResponse buildAutoindex(const std::string& path)
 	html << "<html><body>";
 	html << "<h1>Index of " << path << "</h1><ul>";
 
+	std::string	base = uriPath;
+	if (base[base.size() - 1] != '/')
+		base += '/';
+	
 	struct dirent* entry;
 	while((entry = readdir(dir)) != NULL)
 	{
+		if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..")
+			continue;
+			
 		html	<< "<li><a href=\""
-				<< entry->d_name
+				<< base + entry->d_name
 				<< "\">"
 				<< entry->d_name
 				<< "</a></li>";	
@@ -185,53 +192,6 @@ HttpResponse	serveStaticFile(const std::string& path)
 	return response;
 }
 
-// HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
-// {
-// 	std::string	fullPath;
-//     HttpResponse response;
-
-// 	if (request.uri_path == "/")
-// 	{
-//    		fullPath = route.rootDir + "/" + route.index;
-// 	}
-// 	else
-// 	{
-//     	fullPath = route.rootDir + request.uri_path;
-// 	}
-
-// 	std::cout << "Serving static file: [" << fullPath << "]\n";
-
-// 	std::ifstream file(fullPath.c_str(), std::ios::binary);
-
-// 	if (!file)
-// 	{
-// 		std::cout << "File not found!\n";
-//         response.statusCode = static_cast<HTTP_StatusCode>(404);
-// 		return constructResponse(response);
-// 	}
-
-// 	file.seekg(0, std::ios::end);
-// 	size_t fileSize = static_cast<size_t>(file.tellg());
-// 	file.seekg(0, std::ios::beg);
-
-// 	std::vector<uint8_t> fileData(fileSize);
-
-// 	if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
-//     {
-//         response.statusCode = static_cast<HTTP_StatusCode>(500);
-// 		return constructResponse(response);
-//     }
-
-
-// 	response.statusCode = HTTP_StatusCode::OK;
-// 	response.body = std::move(fileData);
-
-// 	response.headers["Content-Length"] = std::to_string(response.body.size());
-// 	response.headers["Content-Type"] = "text/html";
-	
-// 	return response;
-// }
-
 HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
 {
 	HttpResponse response;
@@ -245,7 +205,12 @@ HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route
 			return serveStaticFile(indexPath);
 		
 		if (route.autoindex)
-			return buildAutoindex(path);
+		{
+			std::string uri = request.uri_path;
+			if (uri.empty() || uri[uri.size() - 1] != '/')
+				uri += '/';
+			return buildAutoindex(path, uri);
+		}
 		
 		response.statusCode = static_cast<HTTP_StatusCode>(403);
 		return constructResponse(response);
