@@ -79,7 +79,7 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
     return false;
 }
 
-// TODO: director file index, autoindexing, error pages, methods verification, POST requests, upload test
+// TODO: director file index, error pages, methods verification, POST request, DELETE request, upload test
 
 // Converts URI (filesystem path)
 std::string	resolvePath(const HttpRequest& request, const routeConfig& route)
