@@ -99,15 +99,15 @@ size_t Client::getBytesSent() const
 //     }
 // }
 
-// void Client::addBytesReceived(size_t bytes)
-// {
-//     _bytesReceived += bytes;
-// }
+void Client::addBytesReceived(ssize_t bytes)
+{
+    _bytesReceived += bytes;
+}
 
-// size_t Client::getBytesReceived() const
-// {
-//     return _bytesReceived;
-// }
+ssize_t Client::getBytesReceived() const
+{
+    return _bytesReceived;
+}
 
 // void Client::appendToReceiveBuffer(const std::string& data)
 // {

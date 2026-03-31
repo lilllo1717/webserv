@@ -33,27 +33,37 @@ std::vector<Listener> buildListeners(std::vector<std::unique_ptr<Server>>& serve
 		}
 	}
 	return listeners;
-	// configs.push_back(config3);
+}
 
+void closeListenSockets(std::vector<Listener>& listeners)
+{
+    for (Listener& lis : listeners)
+    {
+        if (lis.listenFd != -1)
+        {
+            close(lis.listenFd);
+            lis.listenFd = -1;
+        }
+    }
 }
 
 
-void    startListeners(std::vector<Listener>& listeners)
+bool    startListeners(std::vector<Listener>& listeners)
 {
     for (Listener& lis : listeners)
-        {
-            lis.listenFd = socket(AF_INET, SOCK_STREAM, 0);
-            if (lis.listenFd < 0)
+    {
+        lis.listenFd = socket(AF_INET, SOCK_STREAM, 0);
+        if (lis.listenFd < 0)
         {
             std::cerr << "Socket creation failed.\n";
-            // _started = false;
-            return;
+            closeListenSockets(listeners);
+            return false;
         }
         if (fcntl(lis.listenFd, F_SETFL, O_NONBLOCK) == -1)
         {
             std::cerr << "fcntl failed.\n";
-            // _started = false;
-            return;
+            closeListenSockets(listeners);
+            return false;
         }
         /*
             Mark this file descriptor so it is automatically closed on exec()
@@ -62,16 +72,15 @@ void    startListeners(std::vector<Listener>& listeners)
         if (fcntl(lis.listenFd, F_SETFD, FD_CLOEXEC) == -1)
         {
             std::cerr << "fcntl failed.\n";
-            // _started = false;
-            return;
+            closeListenSockets(listeners);
+            return false;
         }
         int opt = 1;
         if (setsockopt(lis.listenFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
         {
             std::cerr << "setsockopt failed.\n";
-            close(lis.listenFd);
-            // _started = false;
-            return ;
+            closeListenSockets(listeners);
+            return false;
         }
         struct sockaddr_in server_address;
         std::memset(&server_address, 0, sizeof(server_address));
@@ -82,24 +91,22 @@ void    startListeners(std::vector<Listener>& listeners)
         if (bind(lis.listenFd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
         {
             std::cerr << "bind failed.\n";
-            close(lis.listenFd);
-            // _started = false;
-            return;
+            closeListenSockets(listeners);
+            return false;
         }
 
         if (listen(lis.listenFd, 10) < 0)
         {
             std::cerr << "listen to socket failed.\n";
-            close(lis.listenFd);
-            // _started = false;
-            return;
+            closeListenSockets(listeners);
+            return false;
         }
         // _bytesReceived = 0;
         // _bytesSent = 0;
 
-        // _started = true;
         // std::cout << "Server started on " << _hostAddress << ":" << _listenPort << "\n";
         std::cout << "Listening on " << lis.endpoint.ip << ":" << lis.endpoint.port
-                  << " fd=" << lis.listenFd << "\n";
+                    << " fd=" << lis.listenFd << "\n";
     }
+    return true;
 }

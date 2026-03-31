@@ -27,13 +27,22 @@ class Server;
 struct Listener
 {
     serverEndpoint endpoint;
-    int listenFd;
+    int listenFd = -1;
     std::vector<Server*> servers;
-    Server* defaultServer;
+    Server* defaultServer = nullptr;
 };
 
 std::vector<Listener> buildListeners(std::vector<std::unique_ptr<Server>>& servers);
-void    startListeners(std::vector<Listener>& listeners);
-
-
+bool    startListeners(std::vector<Listener>& listeners);
+// void closeListenSockets(std::vector<Listener>& listeners)
+// {
+//     for (Listener& lis : listeners)
+//     {
+//         if (lis.listenFd != -1)
+//         {
+//             close(lis.listenFd);
+//             lis.listenFd = -1;
+//         }
+//     }
+// };
 #endif

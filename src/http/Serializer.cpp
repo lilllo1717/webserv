@@ -12,17 +12,23 @@ std::string	serializeHttpResponse(const HttpResponse& response)
 			<< reasonPhrase(response.statusCode)
 			<< "\r\n";
 
+	bool hasConnectionHeader = false;
 	for (std::map<std::string, std::string>::const_iterator it = response.headers.begin();
 			it != response.headers.end();
 			++it)
 	{
+		if (it->first == "Connection")
+			hasConnectionHeader = true;
 		stream << it->first << ": " << it->second << "\r\n";
 	}
 
-	if (response.closeConnection)
-		stream << "Connection: close\r\n";
-	else
-		stream << "Connection: keep-alive\r\n";
+	if (!hasConnectionHeader)
+	{
+		if (response.closeConnection)
+			stream << "Connection: close\r\n";
+		else
+			stream << "Connection: keep-alive\r\n";
+	}
 
 	stream << "\r\n";
 

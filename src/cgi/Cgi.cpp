@@ -68,6 +68,7 @@ CgiHandler::~CgiHandler()
 
 bool CgiHandler::parseOneCGIHeader(std::string& header_line)
 {
+    std::cout << "CGiI header_line : [" << header_line << "\n";
     auto col_pos = header_line.find(':');
     if (col_pos == std::string::npos)
         return false;
@@ -78,18 +79,32 @@ bool CgiHandler::parseOneCGIHeader(std::string& header_line)
     _response.headers[headers_key] = headers_val;
     std::cout << "CGI[" << headers_key << "]" << ":" << headers_val << "\n";
     return true;
-}
+}    // Convert entire body string → vector<uint8_t>
 
 bool CgiHandler::parseCGIHeader(std::string& buffer)
 {
-    while (true)
+
+    std::cout << "parsing CGI headers" << "\n";
+    std::cout << "buffer:  [" <<  buffer << "]\n";
+    while (!buffer.empty())
     {
         auto pos = buffer.find("\r\n");
+        size_t to_add = 2;
+        // std::cout << "pos " <<  pos << "\n";
         if (pos == std::string::npos)
-            return false;
-        if (pos == 0)
-            return true;
+        {
+            pos = buffer.find("\n");
+            to_add = 1;
+            // std::cout << "pos " <<  pos << "\n";
+            if (pos == std::string::npos)
+                return parseOneCGIHeader(buffer);
+                
+        }
+
         std::string header_line = buffer.substr(0, pos);
+        buffer.erase(0, pos + to_add);
+        if (header_line.empty())
+            return true;
         if (parseOneCGIHeader(header_line) == false)
             return false;
     }
@@ -113,14 +128,18 @@ bool CgiHandler::parseCgiOutputIntoHttpResponse()
             _response.body = std::vector<uint8_t>(_cgiOutput.begin(), _cgiOutput.end());
             return true;
         }
-
     }
     temp_sub_headers = _cgiOutput.substr(0, pos);
     size_t body_start = pos + sep_len;
     temp_body = _cgiOutput.substr(body_start);
-    parseCGIHeader(temp_sub_headers);
-    // Convert entire body string → vector<uint8_t>
+    std::string headers_copy = temp_sub_headers;
+    if (!parseCGIHeader(headers_copy)) {
+        std::cerr << "Failed to parse CGI headers\n";
+    }
+
     _response.body = std::vector<uint8_t>(temp_body.begin(), temp_body.end());
+    _response.headers["Content-Length"] = std::to_string(_response.body.size());
+    _response.closeConnection = true;
     std::cout << "CGI _cgiOutput: " << _cgiOutput << "\n";
 
     std::cout << "CGI headers: " << temp_sub_headers << "\n";
@@ -131,35 +150,35 @@ bool CgiHandler::parseCgiOutputIntoHttpResponse()
 
 HttpResponse CgiHandler::executeCgi()
 {
-    HttpResponse response;
+    // HttpResponse response;
     try
     {
         std::cout << "entrred executeCgi" << "\n";
         buildEnvVars();
         if (!createPipes())
         {
-            response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(response);
+            _response.statusCode = static_cast<HTTP_StatusCode>(500);
+            return _response;
         }
         if (!createChildProcess())
         {
-            response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(response);
+            _response.statusCode = static_cast<HTTP_StatusCode>(500);
+            return _response;
         }
         if (!parseCgiOutputIntoHttpResponse())
         {
-            response.statusCode = static_cast<HTTP_StatusCode>(500);
-            return constructResponse(response);
+            _response.statusCode = static_cast<HTTP_StatusCode>(500);
+            return _response;
         }
     }
     catch(const std::exception& e)
     {
         std::cerr << "CGI error." << e.what() << '\n';
-        response.statusCode = static_cast<HTTP_StatusCode>(500);
-        return constructResponse(response);
+        _response.statusCode = static_cast<HTTP_StatusCode>(500);
+        return _response;
     }
     
-    return response;
+    return _response;
 
 }
 
@@ -195,7 +214,6 @@ bool CgiHandler::executeChild()
         std::cerr << "du2 IN failed: " << strerror(errno) << "\n";
         closePipes();
         exit(1);
-        
     }
 
     if (dup2(_stdOutPipe[1], STDOUT_FILENO) == -1)
