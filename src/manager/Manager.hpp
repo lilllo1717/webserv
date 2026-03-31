@@ -67,6 +67,7 @@ class Manager
         void acceptNewConnection(int listenerFd, size_t listenerIndex);
         void receiveDataFromClient(size_t& i);
         void processClientRequest(size_t& i, char* temp_buffer, ssize_t message_size);
+
         void responseToClient(size_t& i);
 
         void closeListenSockets(std::vector<Listener>& listeners);
