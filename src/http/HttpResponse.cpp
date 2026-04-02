@@ -222,7 +222,7 @@ HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route)
 		return constructResponse(response);
 	}
 
-	std::string filename = "upload.bin";
+	std::string filename = "upload.txt";
 	std::string fullPath = route.uploadPath + "/" + filename;
 
 	std::ofstream out(fullPath.c_str(), std::ios::binary);
@@ -241,30 +241,13 @@ HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route)
 	return constructResponse(response);
 }
 
+// HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route)
+// {
+
+// }
+
 HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
 {
-	// HttpResponse response;
-	// std::string path = resolvePath(request, route);
-
-	// if (isDirectory(path))
-	// {
-	// 	std::string indexPath = resolveIndexFile(path, route);
-
-	// 	if (!indexPath.empty())
-	// 		return serveStaticFile(indexPath);
-		
-	// 	if (route.autoindex)
-	// 	{
-	// 		std::string uri = request.uri_path;
-	// 		if (uri.empty() || uri[uri.size() - 1] != '/')
-	// 			uri += '/';
-	// 		return buildAutoindex(path, uri);
-	// 	}
-		
-	// 	response.statusCode = static_cast<HTTP_StatusCode>(403);
-	// 	return constructResponse(response);
-	// }
-	// return serveStaticFile(path);
 	if (request.method == HTTP_GET)
 		return handleGET(request, route);
 	
