@@ -179,7 +179,8 @@ HTTP_Method HttpRequestParser::parseMethodChunk(std::string& requestLine, Cursor
 
 ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, HttpRequest& request)
 {
-    Cursor cursor(request.requestLine);
+    Cursor cursor(requestLine);
+    std::cout << "parseRawRequestLine -> requestLine: " << requestLine << "\n";
     // auto pos = requestLine.find(' ');
     // if (pos == std::string::npos)
     //     return PARSE_ERROR;
@@ -200,14 +201,22 @@ ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, Htt
 ParseResult HttpRequestParser::parseRequestLine(HttpRequest& request)
 {
     auto pos = request.buffer.find("\r\n");
+    std::cout << "parseRequestLine -> request.requestLine: " << request.requestLine << "\n";
+    std::cout << "parseRequestLine -> request.buffer: " << request.buffer << "\n";
+
+
     if (pos == std::string::npos)
     {
+        // request.requestLine.append(request.buffer);
+        std::cout << "parseRequestLine2 -> request.requestLine: " << request.requestLine << "\n";
+
         std::cout << "no rn" << "\n";
         return PARSE_IN_PROGRESS;
         // break;
     }
     request.requestLine = request.buffer.substr(0, pos);
-    // std::cout << "request.requestLine: [" << request.requestLine << "]\n";
+
+    std::cout << "request.requestLine: [" << request.requestLine << "]\n";
     if (parseRawRequestLine(request.requestLine, request) == PARSE_ERROR)
         return PARSE_ERROR;
     request.buffer.erase(0, pos + 2);

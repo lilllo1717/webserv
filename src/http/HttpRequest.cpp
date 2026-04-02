@@ -75,6 +75,7 @@ static BodyType establishBodyType(HttpRequest& request)
     return NONE;
 }
 
+// if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS
 
 
 ParseResult HttpRequestParser::parse(HttpRequest& request)
@@ -83,10 +84,17 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
     {
         if (request.parseState == REQ_LINE)
         {
+            std::cout << "parse -> request.buffer: " << request.buffer << "\n";
+
             ParseResult parseRes = parseRequestLine(request);
-            if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+            if (parseRes == PARSE_ERROR)
             {
                 std::cout << "error after request line" << "\n";
+                return parseRes;
+            }
+            else if (parseRes == PARSE_IN_PROGRESS)
+            {
+                std::cout << "waiting for more data" << "\n";
                 return parseRes;
             }
             // if (parseRes != PARSE_DONE)
@@ -100,10 +108,14 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             // std::cout << "entered headers parsing" << "\n";
 
             ParseResult parseRes = parseHeader(request);
-            if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+            if (parseRes == PARSE_ERROR)
             {
                 std::cout << "some error in parse: " << parseRes <<"\n";
                 
+                return parseRes;
+            }
+            else if (parseRes == PARSE_IN_PROGRESS)
+            {
                 return parseRes;
             }
             // std::cout << "parsed header" << "\n";
@@ -126,7 +138,9 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
 
             // std::cout << "entered body parsing" << "\n";
             ParseResult parseRes = parseBody(request);
-            if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS)
+            if (parseRes == PARSE_ERROR)
+                return parseRes;
+            else if (parseRes == PARSE_IN_PROGRESS)
                 return parseRes;
             request.parseResult = PARSE_DONE;
             return PARSE_DONE;

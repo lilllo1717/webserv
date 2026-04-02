@@ -162,6 +162,9 @@ void Manager::responseToClient(size_t& i)
     
 }
 
+// void Manager::processClientRequest(size_t& i, std::string temp_buffer, ssize_t message_size)
+
+
 void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message_size)
 {
     int client_fd = _poll_fds[i].fd;
@@ -175,6 +178,8 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     //     response.statusCode = static_cast<HTTP_StatusCode>(413);
     // }
     request.buffer.append(temp_buffer, message_size);
+    std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
+
     
 
     HttpRequestParser::parse(request);
@@ -239,6 +244,14 @@ void Manager::receiveDataFromClient(size_t& i)
 {
     int client_fd = _poll_fds[i].fd;
     Client* client = getClient(client_fd);
+    if (!client) {
+        _clients[client_fd] = std::make_unique<Client>(client_fd);
+        client = _clients[client_fd].get();
+        std::cout << "NEW CLIENT created for fd=" << client_fd << "\n";
+    } else {
+        std::cout << "REUSING CLIENT for fd=" << client_fd << "\n";
+    }
+    
     char temp_buffer[4096];
     ssize_t message_size = recv(client_fd, temp_buffer, sizeof(temp_buffer), 0);
     if (message_size == 0)
@@ -278,6 +291,7 @@ void Manager::receiveDataFromClient(size_t& i)
     }
     client->addBytesReceived(message_size);
     processClientRequest(i, temp_buffer, message_size);
+
 }
 
 
