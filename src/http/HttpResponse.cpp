@@ -31,7 +31,7 @@ HttpResponse constructResponse(HttpResponse& response)
 {
     std::cout << "HTTP/1.1" << "\n";
     std::cout << "Status: " << reasonPhrase(response.statusCode) << "\n";
-    for (const auto head: response.headers)
+    for (const auto& head: response.headers)
         std::cout << head.first << ": " << head.second << "\n";
     std::string bodyy;
     bodyy.append(reinterpret_cast<const char*>(response.body.data()), response.body.size());
@@ -185,7 +185,7 @@ HttpResponse	serveStaticFile(const std::string& path)
 	return response;
 }
 
-HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
+HttpResponse	handleGET(const HttpRequest& request, const routeConfig& route)
 {
 	HttpResponse response;
 	std::string path = resolvePath(request, route);
@@ -209,6 +209,76 @@ HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route
 		return constructResponse(response);
 	}
 	return serveStaticFile(path);
+
+}
+
+HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route)
+{
+	HttpResponse response;
+
+	if (route.uploadPath.empty())
+	{
+		response.statusCode = static_cast<HTTP_StatusCode>(403);
+		return constructResponse(response);
+	}
+
+	std::string filename = "upload.bin";
+	std::string fullPath = route.uploadPath + "/" + filename;
+
+	std::ofstream out(fullPath.c_str(), std::ios::binary);
+	if (!out)
+	{
+		response.statusCode = static_cast<HTTP_StatusCode>(403);
+		return constructResponse(response);
+	}
+
+	out.write(reinterpret_cast<const char*>(request.body.data()), request.body.size());
+	out.close();
+
+	response.statusCode = static_cast<HTTP_StatusCode>(201);
+	response.headers["Content-Length"] = "0";
+
+	return constructResponse(response);
+}
+
+HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
+{
+	// HttpResponse response;
+	// std::string path = resolvePath(request, route);
+
+	// if (isDirectory(path))
+	// {
+	// 	std::string indexPath = resolveIndexFile(path, route);
+
+	// 	if (!indexPath.empty())
+	// 		return serveStaticFile(indexPath);
+		
+	// 	if (route.autoindex)
+	// 	{
+	// 		std::string uri = request.uri_path;
+	// 		if (uri.empty() || uri[uri.size() - 1] != '/')
+	// 			uri += '/';
+	// 		return buildAutoindex(path, uri);
+	// 	}
+		
+	// 	response.statusCode = static_cast<HTTP_StatusCode>(403);
+	// 	return constructResponse(response);
+	// }
+	// return serveStaticFile(path);
+	if (request.method == HTTP_GET)
+		return handleGET(request, route);
+	
+	if (request.method == HTTP_POST)
+		return handlePOST(request, route);
+
+	if (request.method == HTTP_DELETE)
+	{
+
+	}
+
+	HttpResponse	response;
+	response.statusCode = static_cast<HTTP_StatusCode>(405);
+	return constructResponse(response);
 }
 
 std::string methodToString(HTTP_Method method)
