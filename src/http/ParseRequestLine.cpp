@@ -8,16 +8,34 @@ bool is_hex(char c)
 // TODO: validate that the path does not go beyond the root
 
 
+ParseResult HttpRequestParser::validateUri(std::string &uri)
+{
+    // invalid:
+    //     ASCII < 32
+    //     ASCII = 127
+    //     space
+    //     NULL byte
+
+    //     % not followed by exactly 2 hex digits
+
+    for (size_t i; i < uri.size(); i++)
+    {
+        unsigned char c = static_cast<unsigned char>(uri[i]);
+
+        if (c == ' ')
+            return PARSE_ERROR;
+        if (c < 32 || c == 127)
+            return PARSE_ERROR;
+        if (!is_hex(uri[i+1]) || !is_hex(uri[i + 2]))
+            return PARSE_ERROR;
+    }
+    return PARSE_DONE;
+
+}
+
+// FOR MAC: REMOVE BEFORE SUBMISSION!!!
 // ParseResult HttpRequestParser::validateUri(std::string &uri)
 // {
-//     // invalid:
-//     //     ASCII < 32
-//     //     ASCII = 127
-//     //     space
-//     //     NULL byte
-
-//     //     % not followed by exactly 2 hex digits
-
 //     for (size_t i = 0; i < uri.size(); i++)
 //     {
 //         unsigned char c = static_cast<unsigned char>(uri[i]);
@@ -26,38 +44,20 @@ bool is_hex(char c)
 //             return PARSE_ERROR;
 //         if (c < 32 || c == 127)
 //             return PARSE_ERROR;
-//         if (!is_hex(uri[i+1]) || !is_hex(uri[i + 2]))
-//             return PARSE_ERROR;
+
+//         if (c == '%')
+//         {
+//             if (i + 2 >= uri.size())
+//                 return PARSE_ERROR;
+
+//             if (!is_hex(uri[i + 1]) || !is_hex(uri[i + 2]))
+//                 return PARSE_ERROR;
+
+//             i += 2;
+//         }
 //     }
 //     return PARSE_DONE;
-
 // }
-
-// FOR MAC: REMOVE BEFORE SUBMISSION!!!
-ParseResult HttpRequestParser::validateUri(std::string &uri)
-{
-    for (size_t i = 0; i < uri.size(); i++)
-    {
-        unsigned char c = static_cast<unsigned char>(uri[i]);
-
-        if (c == ' ')
-            return PARSE_ERROR;
-        if (c < 32 || c == 127)
-            return PARSE_ERROR;
-
-        if (c == '%')
-        {
-            if (i + 2 >= uri.size())
-                return PARSE_ERROR;
-
-            if (!is_hex(uri[i + 1]) || !is_hex(uri[i + 2]))
-                return PARSE_ERROR;
-
-            i += 2;
-        }
-    }
-    return PARSE_DONE;
-}
 
 
 ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request)
