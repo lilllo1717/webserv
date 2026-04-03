@@ -79,7 +79,7 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
     return false;
 }
 
-// TODO: director file index, error pages, methods verification, POST request, DELETE request, upload test
+// TODO: director file index, error pages, methods verification, DELETE request
 
 // Converts URI (filesystem path)
 std::string	resolvePath(const HttpRequest& request, const routeConfig& route)
@@ -241,10 +241,33 @@ HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route)
 	return constructResponse(response);
 }
 
-// HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route)
-// {
+HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route)
+{
+	HttpResponse	response;
+	std::string		path = resolvePath(request, route);
 
-// }
+	struct stat	s;
+	if (stat(path.c_str(), &s) != 0)
+	{
+		response.statusCode = static_cast<HTTP_StatusCode>(404);
+		return constructResponse(response);
+	}
+	if (S_ISDIR(s.st_mode))
+	{
+		response.statusCode = static_cast<HTTP_StatusCode>(403);
+		return constructResponse(response);
+	}
+	if (remove(path.c_str()) != 0)
+	{
+		response.statusCode = static_cast<HTTP_StatusCode>(500);
+		return constructResponse(response);
+	}
+
+	response.statusCode = static_cast<HTTP_StatusCode>(204);
+	response.headers["Content-Length"] = "0";
+
+	return constructResponse(response);
+}
 
 HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route)
 {
@@ -255,9 +278,7 @@ HttpResponse	executeRequest(const HttpRequest& request, const routeConfig& route
 		return handlePOST(request, route);
 
 	if (request.method == HTTP_DELETE)
-	{
-
-	}
+		return handleDELETE(request, route);
 
 	HttpResponse	response;
 	response.statusCode = static_cast<HTTP_StatusCode>(405);
