@@ -14,16 +14,12 @@ SRCS            = src/main.cpp \
 				  src/http/HttpRequest.cpp \
 				  src/http/HttpResponse.cpp \
 				  src/http/Serializer.cpp \
+				  src/http/RequestHandler.cpp \
 				  src/configParser/parser.cpp \
 				  src/configParser/tokenizer.cpp \
 				  src/cgi/Cgi.cpp \
 				  src/cgi/Envp.cpp \
 				  
-
-
-
-                 
-
 OBJS            = $(SRCS:.cpp=.o)
 NAME            = webserv
 
