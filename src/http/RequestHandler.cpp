@@ -88,7 +88,7 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	if (!file)
 	{
 		std::cout << "File not found!\n";
-		response.statusCode = static_cast<HTTP_StatusCode>(403);
+		response.statusCode = static_cast<HTTP_StatusCode>(404);
 		return constructResponse(response);
 	}
 	

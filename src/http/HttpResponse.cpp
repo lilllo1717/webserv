@@ -221,14 +221,4 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
 		response = RequestHandler::executeNormal(request, *bestMatchRouteConfig);
     }
 	return response;
-    // return constructResponse(response);
-    // 1. Find matching server block (Host header) -> done
-    // 2. Find matching location block (URI path) -> done
-    // 3. Check allowed methods -> done
-    // 4. Check redirect -> done
-    // 5. Check CGI -> done
-    // 6. Serve static file
-    // 7. Return proper status
-
-	
 }
