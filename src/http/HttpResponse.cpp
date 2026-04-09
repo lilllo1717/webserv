@@ -1,7 +1,7 @@
 #include "Http.hpp"
 #include "../server/Server.hpp"
 #include "../cgi/Cgi.hpp"
-
+#include "RequestHandler.hpp"
 
 // constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
 // {
@@ -31,7 +31,7 @@ HttpResponse constructResponse(HttpResponse& response)
 {
     std::cout << "HTTP/1.1" << "\n";
     std::cout << "Status: " << reasonPhrase(response.statusCode) << "\n";
-    for (const auto head: response.headers)
+    for (const auto& head: response.headers)
         std::cout << head.first << ": " << head.second << "\n";
     std::string bodyy;
     bodyy.append(reinterpret_cast<const char*>(response.body.data()), response.body.size());
@@ -77,53 +77,6 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
     }
     std::cout << "matchRouteWithConfig returns false" << "\n";
     return false;
-}
-
-HttpResponse	serveStaticFile(const HttpRequest& request, const routeConfig& route)
-{
-	std::string	fullPath;
-    HttpResponse response;
-
-	if (request.uri_path == "/")
-	{
-   		fullPath = route.rootDir + "/" + route.index;
-	}
-	else
-	{
-    	fullPath = route.rootDir + request.uri_path;
-	}
-
-	std::cout << "Serving static file: [" << fullPath << "]\n";
-
-	std::ifstream file(fullPath.c_str(), std::ios::binary);
-
-	if (!file)
-	{
-		std::cout << "File not found!\n";
-        response.statusCode = static_cast<HTTP_StatusCode>(404);
-		return constructResponse(response);
-	}
-
-	file.seekg(0, std::ios::end);
-	size_t fileSize = static_cast<size_t>(file.tellg());
-	file.seekg(0, std::ios::beg);
-
-	std::vector<uint8_t> fileData(fileSize);
-
-	if (!file.read(reinterpret_cast<char *>(fileData.data()), fileSize))
-    {
-        response.statusCode = static_cast<HTTP_StatusCode>(500);
-		return constructResponse(response);
-    }
-
-
-	response.statusCode = HTTP_StatusCode::OK;
-	response.body = std::move(fileData);
-
-	response.headers["Content-Length"] = std::to_string(response.body.size());
-	response.headers["Content-Type"] = "text/html";
-	
-	return response;
 }
 
 std::string methodToString(HTTP_Method method)
@@ -264,18 +217,8 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     }
     else
     {
-        std::cout << "Pair not found." << "\n";
-        // runNormal();
+        std::cout << "Pair not found. Using normal handler" << "\n";
+		response = RequestHandler::executeNormal(request, *bestMatchRouteConfig);
     }
-	// return serveStaticFile(request, *bestMatchRouteConfig);
-    return constructResponse(response);
-    // 1. Find matching server block (Host header) -> done
-    // 2. Find matching location block (URI path) -> done
-    // 3. Check allowed methods -> done
-    // 4. Check redirect -> done
-    // 5. Check CGI -> done
-    // 6. Serve static file
-    // 7. Return proper status
-
-	
+	return response;
 }

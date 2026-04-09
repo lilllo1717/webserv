@@ -35,6 +35,32 @@ ParseResult HttpRequestParser::validateUri(std::string &uri)
     return PARSE_DONE;
 }
 
+// FOR MAC: REMOVE BEFORE SUBMISSION!!!
+// ParseResult HttpRequestParser::validateUri(std::string &uri)
+// {
+//     for (size_t i = 0; i < uri.size(); i++)
+//     {
+//         unsigned char c = static_cast<unsigned char>(uri[i]);
+
+//         if (c == ' ')
+//             return PARSE_ERROR;
+//         if (c < 32 || c == 127)
+//             return PARSE_ERROR;
+
+//         if (c == '%')
+//         {
+//             if (i + 2 >= uri.size())
+//                 return PARSE_ERROR;
+
+//             if (!is_hex(uri[i + 1]) || !is_hex(uri[i + 2]))
+//                 return PARSE_ERROR;
+
+//             i += 2;
+//         }
+//     }
+//     return PARSE_DONE;
+// }
+
 
 ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request)
 {
