@@ -5,9 +5,16 @@
 // Converts URI (filesystem path)
 std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeConfig& route)
 {
-	if (!route.rootDir.empty())
-		return route.rootDir + request.uri_path;
-	return request.uri_path;
+	 std::string relative = request.uri_path;
+
+    // Remove location prefix
+    if (relative.find(route.path) == 0)
+        relative = relative.substr(route.path.length());
+
+    if (relative.empty())
+        relative = "/";
+
+    return route.rootDir + relative;
 }
 
 // Check if path is a directory
@@ -166,6 +173,13 @@ HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const rout
 {
 	HttpResponse	response;
 	std::string		path = resolvePath(request, route);
+
+	// Allow DELETE in upload directory
+	if (route.rootDir != "./uploads")
+	{
+    	response.statusCode = static_cast<HTTP_StatusCode>(403);
+   		return constructResponse(response);
+	}
 
 	struct stat	s;
 	if (stat(path.c_str(), &s) != 0)
