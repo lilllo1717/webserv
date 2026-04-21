@@ -1,5 +1,28 @@
 #include "RequestHandler.hpp"
 
+
+
+HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serverConfig& config)
+{
+    HttpResponse response;
+    response.statusCode = code;
+
+
+    int codeInt = static_cast<int>(code);
+    auto it = config.errorPages.find(codeInt);
+    if (it != config.errorPages.end())
+    {
+        return RequestHandler::serveStaticFile(it->second);
+    }
+
+    std::string phrase(reasonPhrase(code));
+    std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
+    response.body.assign(body.begin(), body.end());
+    response.headers["Content-Type"] = "text/html";
+    response.headers["Content-Length"] = std::to_string(response.body.size());
+    return response;
+}
+
 // TODO: director file index, error pages, methods verification
 
 // Converts URI (filesystem path)
@@ -143,6 +166,12 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route)
 {
 	HttpResponse response;
+
+	std::cout << "=== HANDLE POST ===\n";
+    std::cout << "route.uploadPath = [" << route.uploadPath << "]\n";
+    std::cout << "route.rootDir    = [" << route.rootDir << "]\n";
+    std::cout << "request.uri_path = [" << request.uri_path << "]\n";
+    std::cout << "body size        = [" << request.body.size() << "]\n";
 
 	if (route.uploadPath.empty())
 	{

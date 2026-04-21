@@ -5,7 +5,7 @@
 
 Manager::Manager()
     :
-        _recvBufferSize(4096),
+        _recvBufferSize(30000),
         _maxConnections(128),
         _servers(),
         _clients(),
@@ -190,6 +190,7 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     }
     else if (request.parseResult == PARSE_DONE)
     {
+        std::cout << "!!!!!!!!!!!Content type: " << request.contentType << "\n";
         std::cout << "PARSE_DONE" << "\n";
         size_t listen_index = _clientFdToListenerIndex[client_fd];
         Listener& listener = _listeners[listen_index];
@@ -244,11 +245,14 @@ void Manager::receiveDataFromClient(size_t& i)
 {
     int client_fd = _poll_fds[i].fd;
     Client* client = getClient(client_fd);
-    if (!client) {
+    if (!client)
+    {
         _clients[client_fd] = std::make_unique<Client>(client_fd);
         client = _clients[client_fd].get();
         std::cout << "NEW CLIENT created for fd=" << client_fd << "\n";
-    } else {
+    }
+    else
+    {
         std::cout << "REUSING CLIENT for fd=" << client_fd << "\n";
     }
     
