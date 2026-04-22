@@ -110,6 +110,20 @@ HttpResponse RequestHandler::buildAutoindex(const std::string& path, const std::
 	return response;
 }
 
+std::string	getMimeType(const std::string& path)
+{
+	if (path.find(".jpg") != std::string::npos)
+		return "image/jpeg";
+	if (path.find(".png") != std::string::npos)
+		return "image/png";
+	if (path.find(".gif") != std::string::npos)
+		return "image/gif";
+	if (path.find(".html") != std::string::npos)
+		return "text/html";
+
+	return "application/octet-stream";
+}
+
 HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 {
 	HttpResponse	response;
@@ -131,7 +145,7 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	response.body = std::move(fileData);
 
 	response.headers["Content-Length"] = std::to_string(response.body.size());
-	response.headers["Content-Type"] = "text/html";
+	response.headers["Content-Type"] = getMimeType(path);
 
 	return response;
 }
@@ -179,7 +193,14 @@ HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeC
 		return constructResponse(response);
 	}
 
-	std::string filename = "upload.txt";
+	// std::string filename = "upload.txt";
+
+	size_t	pos = request.uri_path.find_last_of('/');
+	std::string	filename = request.uri_path.substr(pos + 1);
+
+	if (filename.empty())
+		filename = "upload.bin"; // fallback incase file is empty 
+
 	std::string fullPath = route.uploadPath + "/" + filename;
 
 	std::ofstream out(fullPath.c_str(), std::ios::binary);
