@@ -5,7 +5,7 @@
 
 Manager::Manager()
     :
-        _recvBufferSize(30000),
+        _recvBufferSize(100000),
         _maxConnections(128),
         _servers(),
         _clients(),

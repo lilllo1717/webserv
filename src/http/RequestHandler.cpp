@@ -1,7 +1,5 @@
 #include "RequestHandler.hpp"
 
-
-
 HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serverConfig& config)
 {
     HttpResponse response;
@@ -174,7 +172,6 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 		return constructResponse(response);
 	}
 	return serveStaticFile(path);
-
 }
 
 HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route)
@@ -192,8 +189,6 @@ HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeC
 		response.statusCode = static_cast<HTTP_StatusCode>(403);
 		return constructResponse(response);
 	}
-
-	// std::string filename = "upload.txt";
 
 	size_t	pos = request.uri_path.find_last_of('/');
 	std::string	filename = request.uri_path.substr(pos + 1);
