@@ -1,8 +1,8 @@
 <?php
-header('Content-Type: image/png');
-$im = imagecreate(100, 100);
-$red = imagecolorallocate($im, 255, 0, 0);
-imagefill($im, 0, 0, $red);
-imagepng($im);
-imagedestroy($im);
+$body = file_get_contents("php://input");
+
+file_put_contents("/home/tignatov/webserv_git/uploads/cgi_upload.jpg", $body);
+
+header("Content-Type: text/plain");
+echo "Received bytes: " . strlen($body) . "\n";
 ?>

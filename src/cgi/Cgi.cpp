@@ -242,6 +242,12 @@ bool CgiHandler::executeParent()
     std::cout << "executing parent" << "\n";
     close(_stdInPipe[0]);
     close(_stdOutPipe[1]);
+
+    std::cout << "CGI parent request.body.size() = "
+          << _request.body.size() << std::endl;
+
+    std::cout << "CGI parent contentLength = "
+            << _request.contentLength << std::endl;
     write(_stdInPipe[1], _request.body.data(), _request.body.size());
     close(_stdInPipe[1]);
     char temp_buffer[1024];

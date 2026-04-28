@@ -175,46 +175,100 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 	return serveStaticFile(path);
 }
 
-HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
+// Add this helper above handlePOST
+static std::string extensionFromContentType(const std::string& contentType)
 {
-	HttpResponse response;
-
-	std::cout << "=== HANDLE POST ===\n";
-    std::cout << "route.uploadPath = [" << route.uploadPath << "]\n";
-    std::cout << "route.rootDir    = [" << route.rootDir << "]\n";
-    std::cout << "request.uri_path = [" << request.uri_path << "]\n";
-    std::cout << "body size        = [" << request.body.size() << "]\n";
-
-	if (route.uploadPath.empty())
-	{
-		response.statusCode = static_cast<HTTP_StatusCode>(403);
-		return constructResponse(response);
-	}
-
-	size_t	pos = request.uri_path.find_last_of('/');
-	std::string	filename = request.uri_path.substr(pos + 1);
-
-	if (filename.empty())
-		filename = "upload.bin"; // fallback incase file is empty 
-
-	std::string fullPath = route.uploadPath + "/" + filename;
-
-	std::ofstream out(fullPath.c_str(), std::ios::binary);
-	if (!out)
-	{
-		// response.statusCode = static_cast<HTTP_StatusCode>(403);
-		// return constructResponse(response);
-		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
-	}
-
-	out.write(reinterpret_cast<const char*>(request.body.data()), request.body.size());
-	out.close();
-
-	response.statusCode = static_cast<HTTP_StatusCode>(201);
-	response.headers["Content-Length"] = "0";
-
-	return constructResponse(response);
+    if (contentType.find("image/jpeg") != std::string::npos) return ".jpg";
+    if (contentType.find("image/png")  != std::string::npos) return ".png";
+    if (contentType.find("image/gif")  != std::string::npos) return ".gif";
+    if (contentType.find("text/html")  != std::string::npos) return ".html";
+    if (contentType.find("text/plain") != std::string::npos) return ".txt";
+    return ".bin";
 }
+
+HttpResponse RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
+{
+    HttpResponse response;
+
+    if (route.uploadPath.empty())
+    {
+        response.statusCode = static_cast<HTTP_StatusCode>(403);
+        return constructResponse(response);
+    }
+
+    // Try to get filename from URL first (e.g. POST /upload/cat.jpg)
+    size_t pos = request.uri_path.find_last_of('/');
+    std::string filename = request.uri_path.substr(pos + 1);
+
+    // If URI gave us just the location name (e.g. "upload"), it has no extension.
+    // Fall back to generating one from Content-Type.
+    if (filename.empty() || filename.find('.') == std::string::npos)
+    {
+        auto ct = request.headers.find("content-type");
+        std::string ext = (ct != request.headers.end())
+            ? extensionFromContentType(ct->second)
+            : ".bin";
+        if (filename.empty())
+            filename = "upload" + ext;
+        else
+            filename += ext;        // e.g. "upload" → "upload.jpg"
+    }
+
+    std::string fullPath = route.uploadPath + "/" + filename;
+    std::ofstream out(fullPath.c_str(), std::ios::binary);
+    if (!out)
+        return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
+
+    out.write(reinterpret_cast<const char*>(request.body.data()), request.body.size());
+    out.close();
+
+    // Tell the client exactly where the file was stored
+    response.statusCode = static_cast<HTTP_StatusCode>(201);
+    response.headers["Content-Length"] = "0";
+    response.headers["Location"] = "/uploads/" + filename;
+    return constructResponse(response);
+}
+
+// HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
+// {
+// 	HttpResponse response;
+
+// 	std::cout << "=== HANDLE POST ===\n";
+//     std::cout << "route.uploadPath = [" << route.uploadPath << "]\n";
+//     std::cout << "route.rootDir    = [" << route.rootDir << "]\n";
+//     std::cout << "request.uri_path = [" << request.uri_path << "]\n";
+//     std::cout << "body size        = [" << request.body.size() << "]\n";
+
+// 	if (route.uploadPath.empty())
+// 	{
+// 		response.statusCode = static_cast<HTTP_StatusCode>(403);
+// 		return constructResponse(response);
+// 	}
+
+// 	size_t	pos = request.uri_path.find_last_of('/');
+// 	std::string	filename = request.uri_path.substr(pos + 1);
+
+// 	if (filename.empty())
+// 		filename = "upload.bin"; // fallback incase file is empty 
+
+// 	std::string fullPath = route.uploadPath + "/" + filename;
+
+// 	std::ofstream out(fullPath.c_str(), std::ios::binary);
+// 	if (!out)
+// 	{
+// 		// response.statusCode = static_cast<HTTP_StatusCode>(403);
+// 		// return constructResponse(response);
+// 		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
+// 	}
+
+// 	out.write(reinterpret_cast<const char*>(request.body.data()), request.body.size());
+// 	out.close();
+
+// 	response.statusCode = static_cast<HTTP_StatusCode>(201);
+// 	response.headers["Content-Length"] = "0";
+
+// 	return constructResponse(response);
+// }
 
 HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
 {
