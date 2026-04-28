@@ -142,6 +142,9 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	response.statusCode = HTTP_StatusCode::OK;
 	response.body = std::move(fileData);
 
+	std::cout << "serveStaticFile path: [" << path << "]\n";
+	std::cout << "fileData size: " << fileData.size() << "\n";
+
 	response.headers["Content-Length"] = std::to_string(response.body.size());
 	response.headers["Content-Type"] = getMimeType(path);
 
