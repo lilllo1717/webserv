@@ -155,6 +155,13 @@ HttpResponse CgiHandler::executeCgi()
     {
         std::cout << "entrred executeCgi" << "\n";
         buildEnvVars();
+        struct stat s;
+        if (stat(_scriptPath.c_str(), &s) != 0)
+        {
+            std::cerr << "CGI script not found: " << _scriptPath << "\n";
+            _response.statusCode = static_cast<HTTP_StatusCode>(404);
+            return _response;
+        }
         if (!createPipes())
         {
             _response.statusCode = static_cast<HTTP_StatusCode>(500);
