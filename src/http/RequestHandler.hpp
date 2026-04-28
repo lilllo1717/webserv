@@ -6,7 +6,7 @@
 class RequestHandler
 {
 	public:
-		static HttpResponse	executeNormal(const HttpRequest& request, const routeConfig& route);
+		static HttpResponse	executeNormal(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
 	
 	private:
 		static std::string	resolvePath(const HttpRequest& request, const routeConfig& route);
@@ -15,9 +15,9 @@ class RequestHandler
 		static HttpResponse buildAutoindex(const std::string& path, const std::string& uriPath);
 		static HttpResponse	serveStaticFile(const std::string& path);
 
-		static HttpResponse	handleGET(const HttpRequest& request, const routeConfig& route);
-		static HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route);
-		static HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route);
+		static HttpResponse	handleGET(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
+		static HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
+		static HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
 		static HttpResponse buildErrorResponse(HTTP_StatusCode code, const serverConfig& config);
 
 };

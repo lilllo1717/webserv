@@ -5,7 +5,6 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     HttpResponse response;
     response.statusCode = code;
 
-
     int codeInt = static_cast<int>(code);
     auto it = config.errorPages.find(codeInt);
     if (it != config.errorPages.end())
@@ -20,8 +19,6 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     response.headers["Content-Length"] = std::to_string(response.body.size());
     return response;
 }
-
-// TODO: director file index, error pages, methods verification
 
 // Converts URI (filesystem path)
 std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeConfig& route)
@@ -125,13 +122,16 @@ std::string	getMimeType(const std::string& path)
 HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 {
 	HttpResponse	response;
+	serverConfig	config;
 	std::ifstream file(path.c_str(), std::ios::binary);
 
 	if (!file)
 	{
 		std::cout << "File not found!\n";
-		response.statusCode = static_cast<HTTP_StatusCode>(404);
-		return constructResponse(response);
+		// response.statusCode = static_cast<HTTP_StatusCode>(404);
+		// return constructResponse(response);
+		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);
+
 	}
 	
 	std::vector<uint8_t> fileData(
@@ -148,7 +148,7 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	return response;
 }
 
-HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeConfig& route)
+HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
 {
 	HttpResponse response;
 	std::string path = resolvePath(request, route);
@@ -168,13 +168,14 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 			return buildAutoindex(path, uri);
 		}
 		
-		response.statusCode = static_cast<HTTP_StatusCode>(403);
-		return constructResponse(response);
+		// response.statusCode = static_cast<HTTP_StatusCode>(403);
+		// return constructResponse(response);
+		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
 	}
 	return serveStaticFile(path);
 }
 
-HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route)
+HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
 {
 	HttpResponse response;
 
@@ -201,8 +202,9 @@ HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeC
 	std::ofstream out(fullPath.c_str(), std::ios::binary);
 	if (!out)
 	{
-		response.statusCode = static_cast<HTTP_StatusCode>(403);
-		return constructResponse(response);
+		// response.statusCode = static_cast<HTTP_StatusCode>(403);
+		// return constructResponse(response);
+		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
 	}
 
 	out.write(reinterpret_cast<const char*>(request.body.data()), request.body.size());
@@ -214,7 +216,7 @@ HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeC
 	return constructResponse(response);
 }
 
-HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const routeConfig& route)
+HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
 {
 	HttpResponse	response;
 	std::string		path = resolvePath(request, route);
@@ -229,13 +231,15 @@ HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const rout
 	struct stat	s;
 	if (stat(path.c_str(), &s) != 0)
 	{
-		response.statusCode = static_cast<HTTP_StatusCode>(404);
-		return constructResponse(response);
+		// response.statusCode = static_cast<HTTP_StatusCode>(404);
+		// return constructResponse(response);
+		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);
 	}
 	if (S_ISDIR(s.st_mode))
 	{
-		response.statusCode = static_cast<HTTP_StatusCode>(403);
-		return constructResponse(response);
+		// response.statusCode = static_cast<HTTP_StatusCode>(403);
+		// return constructResponse(response);
+		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
 	}
 	if (remove(path.c_str()) != 0)
 	{
@@ -249,16 +253,16 @@ HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const rout
 	return constructResponse(response);
 }
 
-HttpResponse	RequestHandler::executeNormal(const HttpRequest& request, const routeConfig& route)
+HttpResponse	RequestHandler::executeNormal(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
 {
 	if (request.method == HTTP_GET)
-		return handleGET(request, route);
+		return handleGET(request, route, config);
 	
 	if (request.method == HTTP_POST)
-		return handlePOST(request, route);
+		return handlePOST(request, route, config);
 
 	if (request.method == HTTP_DELETE)
-		return handleDELETE(request, route);
+		return handleDELETE(request, route, config);
 
 	HttpResponse	response;
 	response.statusCode = static_cast<HTTP_StatusCode>(405);

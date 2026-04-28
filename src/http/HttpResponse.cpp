@@ -219,7 +219,7 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     else
     {
         std::cout << "Pair not found. Using normal handler" << "\n";
-		response = RequestHandler::executeNormal(request, *bestMatchRouteConfig);
+		response = RequestHandler::executeNormal(request, *bestMatchRouteConfig, selectedServerConfig);
     }
 	return response;
 }
