@@ -32,7 +32,7 @@ std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeC
     if (relative.empty())
         relative = "/";
 
-    return route.rootDir + relative;
+    return route.rootDir + "/" + relative;
 }
 
 // Check if path is a directory

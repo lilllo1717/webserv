@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>webserv / test suite</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0d; --bg2: #141414; --bg3: #1a1a1a;
+    --border: #2a2a2a; --border2: #333; --text: #e8e8e8;
+    --text2: #888; --text3: #555;
+    --green: #4ade80; --green-dim: #166534; --green-bg: #052e16;
+    --red: #f87171; --red-dim: #991b1b; --red-bg: #2d0a0a;
+    --blue: #60a5fa; --blue-dim: #1e40af; --blue-bg: #0c1a3a;
+    --amber: #fbbf24; --amber-bg: #2d1a00;
+    --purple: #a78bfa; --purple-bg: #1a0a3a;
+    --cyan: #22d3ee; --cyan-bg: #0a2a30;
+    --mono: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  }
+  html,body { height:100%; background:var(--bg); color:var(--text); font-family:var(--mono); font-size:13px; }
+  .app { display:grid; grid-template-rows:auto 1fr; height:100vh; overflow:hidden; }
+  .topbar { display:flex; align-items:center; gap:16px; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--bg2); flex-wrap:wrap; }
+  .logo { font-size:15px; font-weight:700; color:var(--text); }
+  .logo span { color:var(--green); }
+  .stats { display:flex; gap:14px; margin-left:8px; }
+  .stat { font-size:11px; color:var(--text3); }
+  .stat b { font-weight:600; }
+  .stat.pass b { color:var(--green); }
+  .stat.fail b { color:var(--red); }
+  .stat.skip b { color:var(--text2); }
+  .config-group { display:flex; align-items:center; gap:8px; margin-left:auto; flex-wrap:wrap; }
+  .config-label { color:var(--text2); font-size:11px; }
+  input[type=text] { background:var(--bg3); border:1px solid var(--border2); color:var(--text); padding:5px 10px; border-radius:6px; font-family:var(--mono); font-size:12px; width:160px; outline:none; }
+  input[type=text]:focus { border-color:var(--green); }
+  .btn-green { padding:6px 14px; background:var(--green-bg); border:1px solid var(--green-dim); color:var(--green); border-radius:6px; cursor:pointer; font-family:var(--mono); font-size:12px; }
+  .btn-green:hover { background:#0a3a1a; }
+  .btn-green:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-gray { padding:6px 14px; background:transparent; border:1px solid var(--border2); color:var(--text2); border-radius:6px; cursor:pointer; font-family:var(--mono); font-size:12px; }
+  .btn-gray:hover { border-color:var(--text2); color:var(--text); }
+  .main { display:grid; grid-template-columns:310px 1fr; overflow:hidden; }
+  .sidebar { border-right:1px solid var(--border); overflow-y:auto; background:var(--bg2); }
+  .content { overflow-y:auto; }
+  .cat-header { padding:10px 16px 5px; font-size:10px; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; display:flex; align-items:center; justify-content:space-between; }
+  .cat-run-btn { font-size:10px; color:var(--text3); cursor:pointer; padding:2px 8px; border:1px solid var(--border); border-radius:4px; background:transparent; font-family:var(--mono); }
+  .cat-run-btn:hover { color:var(--green); border-color:var(--green-dim); }
+  .test-item { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; border-left:2px solid transparent; transition:background 0.1s; }
+  .test-item:hover { background:var(--bg3); }
+  .test-item.active { background:var(--bg3); border-left-color:var(--green); }
+  .method-tag { font-size:9px; font-weight:700; padding:2px 5px; border-radius:4px; min-width:38px; text-align:center; letter-spacing:0.5px; flex-shrink:0; }
+  .tag-GET    { background:var(--green-bg);  color:var(--green);  border:1px solid var(--green-dim); }
+  .tag-POST   { background:var(--blue-bg);   color:var(--blue);   border:1px solid var(--blue-dim); }
+  .tag-DELETE { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-dim); }
+  .tag-CGI    { background:var(--purple-bg); color:var(--purple); border:1px solid #4c1d95; }
+  .tag-ERR    { background:var(--amber-bg);  color:var(--amber);  border:1px solid #92400e; }
+  .tag-HDR    { background:var(--cyan-bg);   color:var(--cyan);   border:1px solid #0e7490; }
+  .test-item-name { font-size:12px; color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .dot-none    { background:var(--border2); }
+  .dot-ok      { background:var(--green); }
+  .dot-err     { background:var(--red); }
+  .dot-warn    { background:var(--amber); }
+  .dot-running { background:var(--blue); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .divider { height:1px; background:var(--border); margin:4px 0; }
+  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text3); gap:12px; }
+  .detail { padding:24px; max-width:860px; }
+  .detail-title { font-size:15px; color:var(--text); margin-bottom:4px; }
+  .detail-desc { font-size:12px; color:var(--text2); margin-bottom:20px; line-height:1.6; }
+  .section-label { font-size:10px; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; margin-top:20px; }
+  .curl-block { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:14px 16px; position:relative; }
+  .curl-text { color:var(--green); font-size:12px; line-height:1.7; white-space:pre-wrap; word-break:break-all; }
+  .copy-btn { position:absolute; top:10px; right:10px; padding:3px 10px; background:var(--bg); border:1px solid var(--border2); color:var(--text2); border-radius:5px; cursor:pointer; font-family:var(--mono); font-size:10px; }
+  .copy-btn:hover { color:var(--text); border-color:var(--text2); }
+  .copy-btn.copied { color:var(--green); border-color:var(--green-dim); }
+  .run-btn { width:100%; padding:10px; background:var(--green-bg); border:1px solid var(--green-dim); color:var(--green); border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:13px; }
+  .run-btn:hover { background:#0a3a1a; }
+  .run-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .expect-box { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-size:12px; color:var(--text2); line-height:1.7; }
+  .expect-label { color:var(--amber); margin-bottom:6px; }
+  .checks-list { display:flex; flex-direction:column; gap:5px; margin-top:10px; border-top:1px solid var(--border); padding-top:10px; }
+  .check-item { font-size:11px; display:flex; align-items:center; gap:8px; }
+  .check-item.pass { color:var(--green); }
+  .check-item.fail { color:var(--red); }
+  .check-item.pending { color:var(--text3); }
+  .result-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .result-header { display:flex; align-items:center; gap:14px; padding:12px 16px; background:var(--bg3); border-bottom:1px solid var(--border); }
+  .result-status { font-size:22px; font-weight:700; }
+  .status-2xx { color:var(--green); }
+  .status-3xx { color:var(--amber); }
+  .status-4xx { color:var(--red); }
+  .status-5xx { color:var(--red); }
+  .result-meta { font-size:11px; color:var(--text2); line-height:1.7; }
+  .result-time { margin-left:auto; font-size:11px; color:var(--text3); text-align:right; line-height:1.7; }
+  .result-tabs { display:flex; border-bottom:1px solid var(--border); background:var(--bg3); }
+  .rtab { padding:8px 16px; font-size:11px; color:var(--text2); cursor:pointer; border-bottom:2px solid transparent; }
+  .rtab.active { color:var(--green); border-bottom-color:var(--green); }
+  .rtab:hover:not(.active) { color:var(--text); }
+  .result-body { padding:16px; max-height:400px; overflow-y:auto; }
+  .headers-table { width:100%; border-collapse:collapse; font-size:11px; }
+  .headers-table td { padding:5px 0; border-bottom:1px solid var(--border); vertical-align:top; }
+  .headers-table td:first-child { color:var(--text2); width:36%; padding-right:16px; }
+  .headers-table td:last-child { color:var(--text); word-break:break-all; }
+  .body-pre { color:var(--text); font-size:11px; white-space:pre-wrap; word-break:break-all; line-height:1.6; }
+  .error-msg { color:var(--red); font-size:12px; line-height:1.7; }
+  .cors-note { background:var(--amber-bg); border:1px solid #92400e; border-radius:6px; padding:12px 14px; margin-top:12px; font-size:11px; color:var(--amber); line-height:1.8; }
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">webserv<span>/</span>tests</div>
+    <div class="stats">
+      <div class="stat pass">pass <b id="stat-pass">0</b></div>
+      <div class="stat fail">fail <b id="stat-fail">0</b></div>
+      <div class="stat skip">pending <b id="stat-skip">0</b></div>
+    </div>
+    <div class="config-group">
+      <span class="config-label">host</span>
+      <input type="text" id="host-input" value="127.0.0.1" />
+      <span class="config-label">port</span>
+      <input type="text" id="port-input" value="8080" style="width:70px" />
+      <button class="btn-green" id="run-all-btn" onclick="runAll()">▶ run all</button>
+      <button class="btn-gray" onclick="clearAll()">clear</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="content" id="content">
+      <div class="empty-state">
+        <div style="font-size:36px">◈</div>
+        <div style="font-size:13px;color:var(--text3)">select a test or click run all</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const TESTS = [
+  // ── STATIC FILES
+  {cat:'STATIC',tag:'GET',name:'root index',desc:'Fetch / and serve index.html',method:'GET',path:'/',body:null,headers:{},
+   expect:'200 OK with HTML body',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body is not empty',fn:r=>r.body.length>0},
+    {label:'content-type is text/html',fn:r=>(r.headers['content-type']||'').includes('text/html')},
+    {label:'content-length header present',fn:r=>!!r.headers['content-length']},
+  ]},
+  {cat:'STATIC',tag:'GET',name:'index.html explicit',desc:'GET /index.html directly by name',method:'GET',path:'/index.html',body:null,headers:{},
+   expect:'200 OK',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'html body returned',fn:r=>r.body.toLowerCase().includes('<html')},
+  ]},
+  {cat:'STATIC',tag:'GET',name:'serve jpg image',desc:'Serve a binary JPEG image file',method:'GET',path:'/cat.jpg',body:null,headers:{},
+   expect:'200 OK — image/jpeg',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'content-type is image/jpeg',fn:r=>(r.headers['content-type']||'').includes('image/jpeg')},
+    {label:'body not empty',fn:r=>r.bodySize>0},
+    {label:'content-length is numeric',fn:r=>!isNaN(parseInt(r.headers['content-length']))},
+  ]},
+  {cat:'STATIC',tag:'GET',name:'serve webp image',desc:'Serve cat.webp image file',method:'GET',path:'/cat.webp',body:null,headers:{},
+   expect:'200 OK',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body not empty',fn:r=>r.bodySize>0},
+  ]},
+  {cat:'STATIC',tag:'GET',name:'autoindex listing',desc:'Directory listing with autoindex on',method:'GET',path:'/public/',body:null,headers:{},
+   expect:'200 OK — HTML directory listing with links',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body contains anchor tags',fn:r=>r.body.includes('<a ')},
+    {label:'content-type is text/html',fn:r=>(r.headers['content-type']||'').includes('text/html')},
+  ]},
+  {cat:'STATIC',tag:'GET',name:'public route',desc:'Fetch the /public location',method:'GET',path:'/public',body:null,headers:{},
+   expect:'200 OK',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+  {cat:'STATIC',tag:'GET',name:'tester page itself',desc:'Serve this HTML test file',method:'GET',path:'/webserv_tester.html',body:null,headers:{},
+   expect:'200 OK — serves this file',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'content-type is text/html',fn:r=>(r.headers['content-type']||'').includes('text/html')},
+    {label:'body not empty',fn:r=>r.bodySize>1000},
+  ]},
+
+  // ── 404 NOT FOUND
+  {cat:'NOT FOUND',tag:'ERR',name:'missing html file',desc:'Request a .html file that does not exist',method:'GET',path:'/does-not-exist.html',body:null,headers:{},
+   expect:'404 Not Found',
+   checks:[{label:'status is 404',fn:r=>r.status===404}]},
+  {cat:'NOT FOUND',tag:'ERR',name:'missing deep path',desc:'Request a totally fake nested path',method:'GET',path:'/totally/fake/path/here',body:null,headers:{},
+   expect:'404 Not Found',
+   checks:[{label:'status is 404',fn:r=>r.status===404}]},
+  {cat:'NOT FOUND',tag:'ERR',name:'missing image',desc:'Request a nonexistent image file',method:'GET',path:'/ghost.jpg',body:null,headers:{},
+   expect:'404 Not Found',
+   checks:[{label:'status is 404',fn:r=>r.status===404}]},
+  {cat:'NOT FOUND',tag:'ERR',name:'missing php file',desc:'Request nonexistent PHP outside CGI',method:'GET',path:'/notreal.php',body:null,headers:{},
+   expect:'404 Not Found',
+   checks:[{label:'status is 404',fn:r=>r.status===404}]},
+
+  // ── METHOD NOT ALLOWED
+  {cat:'METHODS',tag:'ERR',name:'POST to GET route',desc:'POST to / which only allows GET',method:'POST',path:'/',body:'test',headers:{'Content-Type':'text/plain'},
+   expect:'405 Method Not Allowed',
+   checks:[{label:'status is 405',fn:r=>r.status===405}]},
+  {cat:'METHODS',tag:'ERR',name:'DELETE on /public',desc:'DELETE on route that forbids it',method:'DELETE',path:'/public',body:null,headers:{},
+   expect:'405 Method Not Allowed',
+   checks:[{label:'status is 405',fn:r=>r.status===405}]},
+
+  {cat:'METHODS',tag:'ERR',name:'GET to upload route',desc:'GET on /upload which only allows POST',method:'GET',path:'/upload',body:null,headers:{},
+   expect:'405 Method Not Allowed',
+   checks:[{label:'status is 405',fn:r=>r.status===405}]},
+
+  // ── BODY SIZE
+  {cat:'BODY SIZE',tag:'ERR',name:'body too large',desc:'Send body over 10M client_max_body_size limit',method:'POST',path:'/upload',body:'x'.repeat(11*1024*1024),headers:{'Content-Type':'text/plain'},
+   expect:'413 Payload Too Large',
+   checks:[{label:'status is 413',fn:r=>r.status===413}]},
+  {cat:'BODY SIZE',tag:'POST',name:'body at limit',desc:'Send body just under 10M limit',method:'POST',path:'/upload',body:'x'.repeat(9*1024*1024),headers:{'Content-Type':'text/plain'},
+   expect:'201 Created — under the limit',
+   checks:[{label:'status is 201',fn:r=>r.status===201}]},
+  {cat:'BODY SIZE',tag:'POST',name:'empty body',desc:'POST with empty body',method:'POST',path:'/upload',body:'',headers:{'Content-Type':'text/plain'},
+   expect:'201 or 400',
+   checks:[{label:'status is 2xx or 400',fn:r=>r.status<300||r.status===400}]},
+
+  // ── REDIRECTS
+  {cat:'REDIRECTS',tag:'ERR',name:'301 /old → /new',desc:'Trigger 301 redirect from /old',method:'GET',path:'/old',body:null,headers:{},
+   expect:'301 Moved Permanently with Location header',
+   checks:[
+    {label:'status is 301',fn:r=>r.status===301},
+    {label:'location header present',fn:r=>!!r.headers['location']},
+    {label:'location contains /new',fn:r=>(r.headers['location']||'').includes('/new')},
+    {label:'query string preserved from=old',fn:r=>(r.headers['location']||'').includes('from=old')},
+    {label:'query string x=1 preserved',fn:r=>(r.headers['location']||'').includes('x=1')},
+  ]},
+
+  // ── UPLOAD
+  {cat:'UPLOAD',tag:'POST',name:'upload plain text',desc:'POST plain text file to /upload',method:'POST',path:'/upload',body:'hello world this is a test upload',headers:{'Content-Type':'text/plain'},
+   expect:'201 Created with Location header',
+   checks:[
+    {label:'status is 201',fn:r=>r.status===201},
+    {label:'location header set',fn:r=>!!r.headers['location']},
+  ]},
+  {cat:'UPLOAD',tag:'POST',name:'upload form data',desc:'POST application/x-www-form-urlencoded',method:'POST',path:'/upload',body:'field=hello&other=world&num=42',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+   expect:'201 Created',
+   checks:[
+    {label:'status is 201',fn:r=>r.status===201},
+  ]},
+  {cat:'UPLOAD',tag:'POST',name:'upload JSON',desc:'POST JSON payload to /upload',method:'POST',path:'/upload',body:'{"name":"alice","age":30,"active":true}',headers:{'Content-Type':'application/json'},
+   expect:'201 Created',
+   checks:[
+    {label:'status is 201',fn:r=>r.status===201},
+  ]},
+  {cat:'UPLOAD',tag:'POST',name:'upload to wrong route',desc:'POST to /public which disallows it',method:'POST',path:'/public',body:'test',headers:{'Content-Type':'text/plain'},
+   expect:'405 Method Not Allowed',
+   checks:[{label:'status is 405',fn:r=>r.status===405}]},
+
+  // ── CGI GET
+  {cat:'CGI GET',tag:'CGI',name:'php hello.php GET',desc:'Execute hello.php via GET — verify env vars',method:'GET',path:'/cgi-bin/hello.php',body:null,headers:{},
+   expect:'200 OK with PHP output',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body not empty',fn:r=>r.body.length>0},
+    {label:'content-type header set',fn:r=>!!r.headers['content-type']},
+  ]},
+  {cat:'CGI GET',tag:'CGI',name:'query string passed',desc:'QUERY_STRING env var populated',method:'GET',path:'/cgi-bin/hello.php?name=alice&age=30',body:null,headers:{},
+   expect:'PHP output shows name=alice in QUERY_STRING',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body contains alice or QUERY_STRING',fn:r=>r.body.includes('alice')||r.body.includes('QUERY_STRING')},
+  ]},
+  {cat:'CGI GET',tag:'CGI',name:'REQUEST_METHOD is GET',desc:'Verify REQUEST_METHOD env var set to GET',method:'GET',path:'/cgi-bin/hello.php?check=method',body:null,headers:{},
+   expect:'PHP output shows GET',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body contains GET',fn:r=>r.body.includes('GET')},
+  ]},
+  {cat:'CGI GET',tag:'CGI',name:'multiple query params',desc:'Multiple params in query string',method:'GET',path:'/cgi-bin/hello.php?a=1&b=2&c=hello+world&d=foo%20bar',body:null,headers:{},
+   expect:'200 OK',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+  {cat:'CGI GET',tag:'CGI',name:'empty query string',desc:'GET with no query string',method:'GET',path:'/cgi-bin/hello.php',body:null,headers:{},
+   expect:'200 OK — QUERY_STRING empty',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body not empty',fn:r=>r.body.length>0},
+  ]},
+
+  // ── CGI POST
+  {cat:'CGI POST',tag:'CGI',name:'php POST form data',desc:'POST form-encoded body to CGI — PHP reads stdin',method:'POST',path:'/cgi-bin/hello.php',body:'name=alice&age=30&city=amsterdam',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+   expect:'200 OK — PHP reads POST body',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'body not empty',fn:r=>r.body.length>0},
+  ]},
+  {cat:'CGI POST',tag:'CGI',name:'php POST raw text',desc:'POST raw text body to CGI script',method:'POST',path:'/cgi-bin/hello.php',body:'raw body content for stdin test 12345',headers:{'Content-Type':'text/plain'},
+   expect:'200 OK — PHP processes stdin',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+  {cat:'CGI POST',tag:'CGI',name:'php POST JSON',desc:'POST JSON to CGI',method:'POST',path:'/cgi-bin/hello.php',body:'{"key":"value","number":42,"flag":true}',headers:{'Content-Type':'application/json'},
+   expect:'200 OK',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+  {cat:'CGI POST',tag:'CGI',name:'php POST large body',desc:'POST significant data to CGI stdin',method:'POST',path:'/cgi-bin/hello.php',body:'x'.repeat(64*1024),headers:{'Content-Type':'text/plain'},
+   expect:'200 OK — large stdin handled',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+
+  // ── CGI EDGE CASES
+  {cat:'CGI EDGE',tag:'CGI',name:'missing cgi script',desc:'Request nonexistent .php file',method:'GET',path:'/cgi-bin/ghost.php',body:null,headers:{},
+   expect:'404 Not Found or 500',
+   checks:[{label:'status is 404 or 500',fn:r=>r.status===404||r.status===500}]},
+  {cat:'CGI EDGE',tag:'CGI',name:'wrong extension in cgi',desc:'Request .txt in cgi-bin — no CGI handler',method:'GET',path:'/cgi-bin/hello.txt',body:null,headers:{},
+   expect:'404 or 200 static file',
+   checks:[{label:'server responds',fn:r=>r.status>0}]},
+
+  // ── HEADERS
+  {cat:'HEADERS',tag:'HDR',name:'content-length on GET',desc:'All GET responses have Content-Length',method:'GET',path:'/',body:null,headers:{},
+   expect:'Content-Length header present and numeric',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'content-length present',fn:r=>!!r.headers['content-length']},
+    {label:'content-length is number',fn:r=>!isNaN(parseInt(r.headers['content-length']))},
+    {label:'content-length matches body',fn:r=>parseInt(r.headers['content-length'])===r.bodySize},
+  ]},
+  {cat:'HEADERS',tag:'HDR',name:'content-type html',desc:'HTML files get text/html content-type',method:'GET',path:'/index.html',body:null,headers:{},
+   expect:'Content-Type: text/html',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'content-type is text/html',fn:r=>(r.headers['content-type']||'').includes('text/html')},
+  ]},
+  {cat:'HEADERS',tag:'HDR',name:'content-type image',desc:'Image files get image/* content-type',method:'GET',path:'/cat.jpg',body:null,headers:{},
+   expect:'Content-Type: image/jpeg',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+    {label:'content-type is image/jpeg',fn:r=>(r.headers['content-type']||'').includes('image/jpeg')},
+  ]},
+  {cat:'HEADERS',tag:'HDR',name:'custom host header',desc:'Send matching server_name as Host',method:'GET',path:'/',body:null,headers:{'Host':'webserv.com'},
+   expect:'200 OK — server_name matched',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+  {cat:'HEADERS',tag:'HDR',name:'unknown host header',desc:'Send unknown Host — default server or 400',method:'GET',path:'/',body:null,headers:{'Host':'totally.unknown.invalid'},
+   expect:'Server responds (200 default or 400)',
+   checks:[
+    {label:'server responds at all',fn:r=>r.status>0},
+  ]},
+  {cat:'HEADERS',tag:'HDR',name:'connection keep-alive',desc:'Send Connection: keep-alive header',method:'GET',path:'/',body:null,headers:{'Connection':'keep-alive'},
+   expect:'200 OK',
+   checks:[
+    {label:'status is 200',fn:r=>r.status===200},
+  ]},
+  {cat:'HEADERS',tag:'HDR',name:'404 has content-type',desc:'Error responses also set content-type',method:'GET',path:'/ghost.html',body:null,headers:{},
+   expect:'404 with content-type header',
+   checks:[
+    {label:'status is 404',fn:r=>r.status===404},
+    {label:'content-type is set',fn:r=>!!r.headers['content-type']},
+  ]},
+];
+
+// ─── STATE
+const state = { selected:null, results:{}, tabs:{}, running:false };
+
+function getBase() {
+  const h = document.getElementById('host-input').value.trim();
+  const p = document.getElementById('port-input').value.trim();
+  return `http://${h}:${p}`;
+}
+
+function buildCurl(t) {
+  const url = getBase() + t.path;
+  let cmd = `curl -v`;
+  if (t.method !== 'GET') cmd += ` -X ${t.method}`;
+  cmd += ` --no-location`;
+  Object.entries(t.headers).forEach(([k,v]) => { cmd += `\\\n  -H "${k}: ${v}"`; });
+  if (t.body && t.body.length < 300) cmd += `\\\n  -d "${t.body.replace(/"/g,'\\"')}"`;
+  else if (t.body) cmd += `\\\n  -d "[${(t.body.length/1024).toFixed(1)}KB body]"`;
+  cmd += `\\\n  "${url}"`;
+  return cmd;
+}
+
+function dotClass(id) {
+  const r = state.results[id];
+  if (!r) return 'dot-none';
+  if (r.running) return 'dot-running';
+  if (r.error) return 'dot-err';
+  if (!r.checkResults) return 'dot-warn';
+  return r.checkResults.every(c=>c) ? 'dot-ok' : 'dot-err';
+}
+
+function statusClass(s) {
+  if (s>=500) return 'status-5xx';
+  if (s>=400) return 'status-4xx';
+  if (s>=300) return 'status-3xx';
+  return 'status-2xx';
+}
+
+function statusTxt(s) {
+  const m={200:'OK',201:'Created',204:'No Content',301:'Moved Permanently',302:'Found',400:'Bad Request',403:'Forbidden',404:'Not Found',405:'Method Not Allowed',413:'Payload Too Large',500:'Internal Server Error'};
+  return m[s]||'';
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updateStats() {
+  let pass=0,fail=0,skip=0;
+  TESTS.forEach((_,i)=>{
+    const r=state.results[i];
+    if(!r||r.running){skip++;return;}
+    if(r.error){fail++;return;}
+    r.checkResults&&r.checkResults.every(c=>c)?pass++:fail++;
+  });
+  document.getElementById('stat-pass').textContent=pass;
+  document.getElementById('stat-fail').textContent=fail;
+  document.getElementById('stat-skip').textContent=skip;
+}
+
+function renderSidebar() {
+  const cats=[...new Set(TESTS.map(t=>t.cat))];
+  let html='';
+  cats.forEach(cat=>{
+    html+=`<div class="cat-header">${cat}<button class="cat-run-btn" onclick="runCategory('${cat}')">run</button></div>`;
+    TESTS.forEach((t,i)=>{
+      if(t.cat!==cat)return;
+      html+=`<div class="test-item${state.selected===i?' active':''}" onclick="sel(${i})">
+        <div class="method-tag tag-${t.tag}">${t.tag}</div>
+        <div class="test-item-name">${t.name}</div>
+        <div class="status-dot ${dotClass(i)}"></div>
+      </div>`;
+    });
+    html+=`<div class="divider"></div>`;
+  });
+  document.getElementById('sidebar').innerHTML=html;
+}
+
+function renderDetail() {
+  const id=state.selected;
+  const el=document.getElementById('content');
+  if(id===null){el.innerHTML=`<div class="empty-state"><div style="font-size:36px">◈</div><div style="font-size:13px;color:var(--text3)">select a test or click run all</div></div>`;return;}
+  const t=TESTS[id];
+  const r=state.results[id];
+  const tab=state.tabs[id]||'headers';
+  const curl=buildCurl(t);
+
+  let checksHtml='';
+  if(r&&!r.running){
+    const items=(t.checks||[]).map((c,i)=>{
+      if(r.error)return`<div class="check-item pending">○ ${esc(c.label)}</div>`;
+      const p=r.checkResults&&r.checkResults[i];
+      return`<div class="check-item ${p?'pass':'fail'}">${p?'✓':'✗'} ${esc(c.label)}</div>`;
+    }).join('');
+    checksHtml=`<div class="checks-list">${items}</div>`;
+  }
+
+  let resultHtml='';
+  if(r&&r.running){
+    resultHtml=`<div class="result-box"><div class="result-header"><span style="color:var(--blue);font-size:14px">running…</span></div></div>`;
+  }else if(r&&r.error){
+    resultHtml=`<div class="result-box">
+      <div class="result-header"><span class="result-status status-5xx">ERR</span><div class="result-meta">${esc(r.error)}</div></div>
+      <div class="result-body">
+        <div class="error-msg">${esc(r.error)}</div>
+        <div class="cors-note">
+          <b>Connection refused or CORS error?</b><br>
+          Make sure this file is served by your webserver:<br>
+          <code>http://127.0.0.1:8080/webserv_tester.html</code><br><br>
+          Or add this header to all your server responses:<br>
+          <code>Access-Control-Allow-Origin: *</code>
+        </div>
+      </div></div>`;
+  }else if(r){
+    const hrows=Object.entries(r.headers).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('');
+    const btrunc=r.body.length>5000?r.body.slice(0,5000)+'\n…[truncated]':r.body;
+    const bodyContent=tab==='headers'
+      ?`<table class="headers-table">${hrows||'<tr><td colspan="2" style="color:var(--text3)">no headers captured</td></tr>'}</table>`
+      :`<pre class="body-pre">${esc(btrunc)}</pre>`;
+    resultHtml=`<div class="result-box">
+      <div class="result-header">
+        <span class="result-status ${statusClass(r.status)}">${r.status}</span>
+        <div>
+          <div class="result-meta">${r.statusText||statusTxt(r.status)}</div>
+          <div class="result-meta">${esc(r.headers['content-type']||'no content-type')}</div>
+        </div>
+        <div class="result-time">${r.time}ms<br>${r.bodySize.toLocaleString()} bytes</div>
+      </div>
+      <div class="result-tabs">
+        <div class="rtab ${tab==='headers'?'active':''}" onclick="setTab(${id},'headers')">response headers</div>
+        <div class="rtab ${tab==='body'?'active':''}" onclick="setTab(${id},'body')">body</div>
+      </div>
+      <div class="result-body">${bodyContent}</div>
+    </div>`;
+  }
+
+  el.innerHTML=`<div class="detail">
+    <div class="detail-title">${esc(t.name)}</div>
+    <div class="detail-desc">${esc(t.desc)}</div>
+    <div class="section-label">curl command</div>
+    <div class="curl-block">
+      <pre class="curl-text">${esc(curl)}</pre>
+      <button class="copy-btn" id="copybtn-${id}" onclick="copyCurl(${id})">copy</button>
+    </div>
+    <div class="section-label">checks</div>
+    <div class="expect-box">
+      <div class="expect-label">→ ${esc(t.expect)}</div>
+      ${checksHtml}
+    </div>
+    <div class="section-label">run</div>
+    <button class="run-btn" onclick="runTest(${id})" ${r?.running?'disabled':''}>
+      ${r?.running?'⏳ running…':'▶ run this test'}
+    </button>
+    ${resultHtml?`<div class="section-label">result</div>${resultHtml}`:''}
+  </div>`;
+}
+
+function setTab(id,tab){state.tabs[id]=tab;renderDetail();}
+function sel(id){state.selected=id;renderSidebar();renderDetail();}
+
+async function runTest(id) {
+  const t=TESTS[id];
+  state.results[id]={running:true};
+  if(state.selected===id)renderDetail();
+  renderSidebar();
+  const url=getBase()+t.path;
+  const start=Date.now();
+  try{
+    const opts={method:t.method,headers:{...t.headers},redirect:'manual'};
+    if(t.body&&t.method!=='GET'&&t.method!=='HEAD')opts.body=t.body;
+    const res=await fetch(url,opts);
+    const elapsed=Date.now()-start;
+    const bodyText=await res.text().catch(()=>'');
+    const headers={};
+    res.headers.forEach((v,k)=>{headers[k]=v;});
+    const result={running:false,status:res.status,statusText:res.statusText||statusTxt(res.status),headers,body:bodyText,bodySize:bodyText.length,time:elapsed};
+    result.checkResults=t.checks.map(c=>{try{return!!c.fn(result);}catch(e){return false;}});
+    state.results[id]=result;
+  }catch(e){
+    state.results[id]={running:false,error:e.message};
+  }
+  if(state.selected===id)renderDetail();
+  renderSidebar();
+  updateStats();
+}
+
+async function runCategory(cat) {
+  const ids=TESTS.map((t,i)=>t.cat===cat?i:null).filter(i=>i!==null);
+  for(const id of ids)await runTest(id);
+}
+
+async function runAll() {
+  if(state.running)return;
+  state.running=true;
+  const btn=document.getElementById('run-all-btn');
+  btn.disabled=true;btn.textContent='⏳ running…';
+  for(let i=0;i<TESTS.length;i++)await runTest(i);
+  state.running=false;
+  btn.disabled=false;btn.textContent='▶ run all';
+}
+
+function clearAll(){state.results={};updateStats();renderSidebar();renderDetail();}
+
+function copyCurl(id){
+  navigator.clipboard.writeText(buildCurl(TESTS[id]).replace(/\\\n  /g,' ')).then(()=>{
+    const b=document.getElementById(`copybtn-${id}`);
+    if(b){b.textContent='copied!';b.classList.add('copied');setTimeout(()=>{b.textContent='copy';b.classList.remove('copied');},1500);}
+  });
+}
+
+document.getElementById('host-input').addEventListener('input',renderDetail);
+document.getElementById('port-input').addEventListener('input',renderDetail);
+renderSidebar();renderDetail();updateStats();
+</script>
+</body>
+</html>
