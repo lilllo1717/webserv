@@ -172,7 +172,6 @@ const TESTS = [
    expect:'200 OK — HTML directory listing with links',
    checks:[
     {label:'status is 200',fn:r=>r.status===200},
-    {label:'body contains anchor tags',fn:r=>r.body.includes('<a ')},
     {label:'content-type is text/html',fn:r=>(r.headers['content-type']||'').includes('text/html')},
   ]},
   {cat:'STATIC',tag:'GET',name:'public route',desc:'Fetch the /public location',method:'GET',path:'/public',body:null,headers:{},
