@@ -29,8 +29,8 @@ std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeC
     if (relative.find(route.path) == 0)
         relative = relative.substr(route.path.length());
 
-    if (relative.empty())
-        relative = "/";
+    if (relative.empty() || relative== "/")
+        return route.rootDir;
 
     return route.rootDir + "/" + relative;
 }
@@ -51,7 +51,12 @@ std::string	RequestHandler::resolveIndexFile(const std::string& dirPath, const r
 	if (route.index.empty())
 		return "";
 
-	std::string fullPath = dirPath + "/" + route.index;
+	std::string fullPath = dirPath;
+
+	if (!fullPath.empty() && fullPath.back() == '/')
+		fullPath.pop_back();
+
+	fullPath += "/" + route.index;
 
 	std::ifstream file(fullPath.c_str());
 	if (file.good())

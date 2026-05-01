@@ -173,6 +173,12 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     std::string methodStringed = methodToString(request.method);
     std::cout << "methodStringed: " << methodStringed << "\n";
 
+    if (bestMatchRouteConfig->isRedirect == true)
+    {
+        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
+        response.headers["Location"] = bestMatchRouteConfig->redirectTarget;
+        return constructResponse(response);
+    }
     if (std::find(bestMatchRouteConfig->httpMethods.begin(), bestMatchRouteConfig->httpMethods.end(), methodStringed)
          == bestMatchRouteConfig->httpMethods.end())
          {
@@ -180,14 +186,6 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
             response.statusCode = static_cast<HTTP_StatusCode>(405);
             return constructResponse(response);
          }
-    if (bestMatchRouteConfig->isRedirect == true)
-    {
-        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
-        request.headers["location"] = bestMatchRouteConfig->uploadPath;
-        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
-        return constructResponse(response);
-
-    }
     std::string extensionFromRequest = extractExtensionFromUri(request);
     const std::map<std::string, std::string>& cgi = bestMatchRouteConfig->cgi;
     if (cgi.empty())
