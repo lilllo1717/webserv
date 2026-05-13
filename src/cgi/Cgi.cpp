@@ -204,7 +204,7 @@ bool CgiHandler::createPipes()
         close(_stdInPipe[0]);
         close(_stdInPipe[1]);
         _stdInPipe[0] = -1;
-        _stdOutPipe[1] = -1;
+        _stdInPipe[1] = -1;
         std::cerr << "Failed to create stdout pipe: " << strerror(errno) << "\n";
         return false;
     }
@@ -287,7 +287,8 @@ bool CgiHandler::createChildProcess()
     else
     {
         _childPid = pid;
-        executeParent();
+        close(_stdInPipe[0]);
+        close(_stdOutPipe[1]);
     }
     return true;
 }

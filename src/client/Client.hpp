@@ -10,6 +10,28 @@
 # include <map>
 # include "../http/Http.hpp"
 
+struct CgiState
+{
+    pid_t childPid;
+    int     stdInFd;
+    int     stdoutFd;
+    size_t  bodyWritten;
+    std::string output;
+    bool stdInDone;
+    bool    done;
+
+    CgiState() :
+        childPid(-1),
+        stdInFd(-1),
+        stdoutFd(-1),
+        bodyWritten(0),
+        stdInDone(false),
+        done(false)
+        {}
+
+};
+
+
 class Client
 {
     private:
@@ -22,6 +44,7 @@ class Client
         size_t      _sendLimit;
         struct HttpRequest _httpRequest;
         struct HttpResponse _httpResponse;
+        CgiState* _cgiState;
 
     public:
         Client();
@@ -31,6 +54,9 @@ class Client
 
         void setSocketFd(int socketFd);
         int getSocketFd() const;
+        CgiState* getCgiState();
+        void initializeCgiState();
+        void cleanupCgiState();
 
         void addBytesSent(size_t bytes);
         void addBytesReceived(ssize_t bytes);

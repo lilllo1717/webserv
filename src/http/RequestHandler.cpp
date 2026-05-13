@@ -9,7 +9,9 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     auto it = config.errorPages.find(codeInt);
     if (it != config.errorPages.end())
     {
-        return RequestHandler::serveStaticFile(it->second);
+        HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
+		errorPage.statusCode = code;
+		return errorPage;
     }
 
     std::string phrase(reasonPhrase(code));

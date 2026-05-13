@@ -14,7 +14,8 @@ Manager::Manager()
         _poll_fds(),
         _listeners(),
         _listenFdtoListenerIndex(),
-        _clientFdToRemoteAddress()
+        _clientFdToRemoteAddress(),
+        _cgiFdtoClientFd()
     
 {
     std::cout << "Manager Constructor called.\n";
@@ -72,6 +73,21 @@ void Manager::buildListenersFromServers()
 {
     _listeners = buildListeners(_servers);
 }
+
+void Manager::writeCgiBody(size_t& i, Client* client)
+{  
+    //write to CGI stdin
+}
+
+void Manager::readCgiOutput(size_t& i, Client* client)
+{
+    //read from CGI stdout
+}
+
+void Manager::finishCgi(size_t& i, Client* client)
+{
+    //parse CGI output, generate response, clean up CGI state
+}   
 
 int Manager::startListenersServers()
 {
@@ -151,13 +167,25 @@ void Manager::responseToClient(size_t& i)
     }
 
     client->clearBuffer(bytes_sent);
-    if (client->getSendBuffer().empty())
+
+    if (!client->getSendBuffer().empty())
+        return;
+    
+    bool keepAlive = client->getHttpRequest().keepAlive;
+
+    if (keepAlive)
+    {
+        client->getHttpRequest() = HttpRequest();
+        _poll_fds[i].events &= ~POLLOUT;
+        _poll_fds[i].events |=  POLLIN;
+    }
+
+    else
     {
         close(client_fd);
         removeClient(client_fd);
         _poll_fds.erase(_poll_fds.begin() + i);
         --i;
-        return;
     }
     
 }
@@ -187,6 +215,13 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     if (request.parseResult == PARSE_ERROR)
     {
         std::cout << "PARSE_ERROR" << "\n";
+        HttpResponse errResp;
+        errResp.statusCode = static_cast<HTTP_StatusCode>(400);
+        errResp.headers["Content-Length"] = "0";
+        errResp.headers["Connection"] = "close";
+        client->appendToSendBuffer(serializeHttpResponse(errResp));
+        _poll_fds[i].events &= ~POLLIN;
+        _poll_fds[i].events |= POLLOUT;
     }
     else if (request.parseResult == PARSE_DONE)
     {

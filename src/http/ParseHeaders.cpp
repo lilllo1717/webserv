@@ -43,6 +43,12 @@ ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer, HttpReques
         request.host = headers_val;
     if (headers_key == "content-type")
         request.contentType = headers_val;
+    if (headers_key == "connection")
+    {
+        std::string val = headers_val;
+        lowerLettersInHeaders(val);
+        request.keepAlive= (val.find("keep-alive") != std::string::npos);
+    }
     request.headers[headers_key] = headers_val;
     std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";
 
