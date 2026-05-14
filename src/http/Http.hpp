@@ -57,6 +57,14 @@ enum ParseResult
     PARSE_ERROR
 };
 
+enum RouteDecision
+{
+    DES_NORMAL,
+    DES_CGI,
+    DES_ERROR,
+    DES_REDIRECT
+};
+
 enum HTTP_Method
 {
     HTTP_GET,
@@ -90,6 +98,20 @@ enum class HTTP_StatusCode : int
 };
 
 
+struct HttpResponse
+{
+    /*    --------  Status line  ---------   */ // HTTP/1.1 200 OK
+    /*   Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF   */
+    HTTP_StatusCode statusCode = HTTP_StatusCode::OK;                      // 200, 404, etc.
+
+    /*    --------   Headers  ---------   */
+    std::map<std::string, std::string> headers;
+
+    /*    --------   Body  ---------   */
+    std::vector<uint8_t> body;
+
+    bool closeConnection = false;
+};
 
 struct RequestMatchResult
 {
@@ -101,6 +123,16 @@ struct RequestMatchResult
     std::string interpreter;
 
 };
+
+struct RouterResult
+{
+    RouteDecision   decision;
+    HttpResponse    response;
+    RequestMatchResult  matchResult;
+    const routeConfig* routeConfig;
+    const serverConfig* serverConfig;
+};
+
 
 
 struct HttpRequest
@@ -148,20 +180,6 @@ struct HttpRequest
     std::map<std::string, std::string> trailers;
 };
 
-struct HttpResponse
-{
-    /*    --------  Status line  ---------   */ // HTTP/1.1 200 OK
-    /*   Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF   */
-    HTTP_StatusCode statusCode = HTTP_StatusCode::OK;                      // 200, 404, etc.
-
-    /*    --------   Headers  ---------   */
-    std::map<std::string, std::string> headers;
-
-    /*    --------   Body  ---------   */
-    std::vector<uint8_t> body;
-
-    bool closeConnection = false;
-};
 
 class HttpRequestParser
 {
@@ -228,8 +246,9 @@ public:
 
 class Router
 {
+
     public:
-        HttpResponse handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr);
+        RouterResult handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr);
 
 };
 

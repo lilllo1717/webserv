@@ -63,15 +63,15 @@ int Client::getSocketFd() const
     return _socketFd;
 }
 
-CgiState* Client::getCgiState()
-{
-    return _cgiState;
-}
 
-void Client::initializeCgiState()
+void Client::initializeCgiState(CgiState& state)
 {
-    if (_cgiState == nullptr)
-        _cgiState = new CgiState();
+    if (_cgiState != nullptr)
+    {
+        delete _cgiState;
+        _cgiState = nullptr;
+    }
+    _cgiState = new CgiState(state);
 }
 
 void Client::cleanupCgiState()
