@@ -9,7 +9,9 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     auto it = config.errorPages.find(codeInt);
     if (it != config.errorPages.end())
     {
-        return RequestHandler::serveStaticFile(it->second);
+        HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
+		errorPage.statusCode = code;
+		return errorPage;
     }
 
     std::string phrase(reasonPhrase(code));
@@ -29,8 +31,8 @@ std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeC
     if (relative.find(route.path) == 0)
         relative = relative.substr(route.path.length());
 
-    if (relative.empty())
-        relative = "/";
+    if (relative.empty() || relative== "/")
+        return route.rootDir;
 
     return route.rootDir + "/" + relative;
 }
@@ -51,7 +53,12 @@ std::string	RequestHandler::resolveIndexFile(const std::string& dirPath, const r
 	if (route.index.empty())
 		return "";
 
-	std::string fullPath = dirPath + "/" + route.index;
+	std::string fullPath = dirPath;
+
+	if (!fullPath.empty() && fullPath.back() == '/')
+		fullPath.pop_back();
+
+	fullPath += "/" + route.index;
 
 	std::ifstream file(fullPath.c_str());
 	if (file.good())
@@ -141,6 +148,9 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	
 	response.statusCode = HTTP_StatusCode::OK;
 	response.body = std::move(fileData);
+
+	std::cout << "serveStaticFile path: [" << path << "]\n";
+	std::cout << "fileData size: " << fileData.size() << "\n";
 
 	response.headers["Content-Length"] = std::to_string(response.body.size());
 	response.headers["Content-Type"] = getMimeType(path);

@@ -20,7 +20,7 @@ static ParseResult parseChunkSize(HttpRequest& request)
     }
     else if (c == '\r')
     {
-        if (request.buffer.empty())
+        if (request.sizeBuffer.empty())
             return PARSE_ERROR;
         size_t converted;
         if (!convertHexToSizeT(request.sizeBuffer, converted))

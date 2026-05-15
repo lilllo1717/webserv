@@ -20,6 +20,7 @@
 // #include "webserv.hpp"
 #include "../http/Http.hpp"
 #include "../configParser/parser.hpp"
+#include "CgiState.hpp"
 
 struct RequestMatchResult;
 
@@ -48,8 +49,8 @@ class CgiHandler
         virtual ~CgiHandler();
         CgiHandler& operator=(const CgiHandler&) = delete;
 
-
-        HttpResponse executeCgi();
+        static HttpResponse parseCgiOutputIntoHttpResponse(const std::string& cgiOutput);
+        bool executeCgi(CgiState& outState);
 
     private:
         void buildEnvVars();
@@ -57,10 +58,10 @@ class CgiHandler
         bool createChildProcess();
         bool executeChild();
         bool executeParent();
-        bool parseCgiOutputIntoHttpResponse();
+        
         void closePipes();
-        bool parseCGIHeader(std::string& buffer);
-        bool parseOneCGIHeader(std::string&  header_line);
+        static bool parseCGIHeader(std::string& buffer, HttpResponse& response);
+        static bool parseOneCGIHeader(std::string&  header_line, HttpResponse& response);
 
 };
 

@@ -108,17 +108,18 @@ std::string extractExtensionFromUri(HttpRequest request)
 
 } 
 
-HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
+RouterResult Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
 {
     (void)listener;
+    RouterResult routerResult;
     RequestMatchResult matchResult;
     HttpResponse response;
     if (request.host.empty())
     {
-        std::cout << "no host name"  << "\n";
-
-        response.statusCode = static_cast<HTTP_StatusCode>(400);
-        return constructResponse(response);
+        // std::cout << "no host name"  << "\n";
+        routerResult.decision = DES_ERROR;
+        routerResult.response.statusCode = static_cast<HTTP_StatusCode>(400);
+        return routerResult;
     }
     const Server* selectedServer = listener.defaultServer;
     std::string hostName = getHostName(request.host);
@@ -164,62 +165,50 @@ HttpResponse Router::handleRequest(HttpRequest& request, const Listener& listene
     }
     if (bestMatchRouteConfig == NULL)
     {
-        std::cout << "error ar matching uri "  "\n";
-        response.statusCode = static_cast<HTTP_StatusCode>(404);
-        return constructResponse(response);
+        // std::cout << "error ar matching uri "  "\n";
+        routerResult.decision = DES_ERROR;
+        routerResult.response.statusCode = static_cast<HTTP_StatusCode>(404);
+        return routerResult;
         
     }
     std::cout << "bestMatchRouteConfig uri: " << bestMatchRouteConfig->path << "\n";
     std::string methodStringed = methodToString(request.method);
     std::cout << "methodStringed: " << methodStringed << "\n";
 
+    if (bestMatchRouteConfig->isRedirect == true)
+    {
+        routerResult.decision = DES_REDIRECT;
+        routerResult.response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
+        routerResult.response.headers["Location"] = bestMatchRouteConfig->redirectTarget;
+        return routerResult;
+    }
     if (std::find(bestMatchRouteConfig->httpMethods.begin(), bestMatchRouteConfig->httpMethods.end(), methodStringed)
          == bestMatchRouteConfig->httpMethods.end())
          {
             // std::cout << "no method match." << "\n";
-            response.statusCode = static_cast<HTTP_StatusCode>(405);
-            return constructResponse(response);
+            routerResult.decision = DES_ERROR;
+            routerResult.response.statusCode = static_cast<HTTP_StatusCode>(405);
+            return routerResult;
          }
-    if (bestMatchRouteConfig->isRedirect == true)
-    {
-        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
-        request.headers["location"] = bestMatchRouteConfig->uploadPath;
-        response.statusCode = static_cast<HTTP_StatusCode>(bestMatchRouteConfig->redirectCode);
-        return constructResponse(response);
-
-    }
-    std::string extensionFromRequest = extractExtensionFromUri(request);
-    const std::map<std::string, std::string>& cgi = bestMatchRouteConfig->cgi;
-    if (cgi.empty())
-    {
-        std::cout << "CGI is empty =(( " << "\n";
-
-    }
-
-    for (std::map<std::string, std::string>::const_iterator it = cgi.begin();
-        it != cgi.end();
-        ++it)
-    {
-        matchResult.interpreter = it->second;
-        std::cout << "CGI extension: " << it->first
-                << " interpreter: " << it->second << "\n";
-    }
     matchResult.selectedServer = selectedServer;
     matchResult.bestMatchRouteConfig = bestMatchRouteConfig;
     matchResult.stringifiedMethod = methodStringed;
     matchResult.remoteAddress = remoteAddr;
     matchResult.selectedServerCon = selectedServerConfig;
-    std::map<std::string, std::string>::const_iterator it = bestMatchRouteConfig->cgi.find(extensionFromRequest);
-    if (it != bestMatchRouteConfig->cgi.end())
+    
+    std::string extensionFromRequest = extractExtensionFromUri(request);
+    const std::map<std::string, std::string>::const_iterator cgiIter = bestMatchRouteConfig->cgi.find(extensionFromRequest);
+
+    if (cgiIter != bestMatchRouteConfig->cgi.end())
     {
-        CgiHandler cgi(request, *bestMatchRouteConfig, matchResult);
-        std::cout << "Pair Found, execute CGI." << "\n";
-        response = cgi.executeCgi();
+        matchResult.interpreter = cgiIter->second;
+        routerResult.decision = DES_CGI;
+        routerResult.matchResult = matchResult;
+        routerResult.routeConfigure = bestMatchRouteConfig;
+        return routerResult;
     }
-    else
-    {
-        std::cout << "Pair not found. Using normal handler" << "\n";
-		response = RequestHandler::executeNormal(request, *bestMatchRouteConfig, selectedServerConfig);
-    }
-	return response;
+    routerResult.decision = DES_NORMAL;
+    routerResult.matchResult = matchResult;
+    routerResult.routeConfigure = bestMatchRouteConfig;
+    return routerResult;
 }

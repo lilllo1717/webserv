@@ -10,7 +10,8 @@ Client::Client()
         _sendBuffer(""),
         _sendLimit(4096),
         _httpRequest(),
-        _httpResponse()
+        _httpResponse(),
+        _cgiState(nullptr)
 {
     std::cout << "Client default Constructor called.\n";
 }
@@ -24,7 +25,8 @@ Client::Client(int socketFd)
         _sendBuffer(""),
         _sendLimit(4096),
         _httpRequest(),
-        _httpResponse()
+        _httpResponse(),
+        _cgiState(nullptr)
 
 {
     std::cout << "Client Constructor called.\n";
@@ -41,6 +43,8 @@ Client& Client::operator=(const Client& other)
         _sendBuffer = other._sendBuffer;
         _sendLimit = other._sendLimit;
         _httpRequest = other._httpRequest;
+        _httpResponse = other._httpResponse;
+        
     }
     return *this;
 }
@@ -57,6 +61,26 @@ void Client::setSocketFd(int socketFd)
 int Client::getSocketFd() const
 {
     return _socketFd;
+}
+
+
+void Client::initializeCgiState(CgiState& state)
+{
+    if (_cgiState != nullptr)
+    {
+        delete _cgiState;
+        _cgiState = nullptr;
+    }
+    _cgiState = new CgiState(state);
+}
+
+void Client::cleanupCgiState()
+{
+    if (_cgiState != nullptr)
+    {
+        delete _cgiState;
+        _cgiState = nullptr;
+    }
 }
 
 void Client::addBytesSent(size_t bytes)
@@ -130,6 +154,12 @@ const std::string& Client::getSendBuffer() const
 {
     return _sendBuffer;
 }
+
+CgiState* Client::getCgiState()
+{
+    return _cgiState;
+}
+
 
 void Client::setBufferLimit(size_t limit)
 {

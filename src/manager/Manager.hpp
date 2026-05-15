@@ -10,11 +10,16 @@
 # include <map>
 # include <unordered_map>
 # include <memory>
+# include <sys/wait.h>
 # include "../client/Client.hpp"
 # include "../server/Server.hpp"
 # include "../configParser/parser.hpp"
-# include "../http/Router.hpp"
+# include "../http/RequestHandler.hpp"
+# include "../http/Http.hpp"
 # include <arpa/inet.h>
+# include "../cgi/Cgi.hpp"
+# include "../cgi/CgiState.hpp"
+
 
 
 struct Listener;
@@ -24,7 +29,7 @@ class Router;
 class Manager
 {
     private:
-        ssize_t  _recvBufferSize;
+        size_t  _recvBufferSize;
         ssize_t  _maxConnections;
 
         std::vector<std::unique_ptr<Server>> _servers;
@@ -40,6 +45,7 @@ class Manager
         std::unordered_map<int, size_t> _clientFdToListenerIndex;
 
         std::map<int, std::string>  _clientFdToRemoteAddress;
+        std::map<int, int> _cgiFdtoClientFd;
 
     public:
         Manager();
@@ -71,6 +77,10 @@ class Manager
         void responseToClient(size_t& i);
 
         void closeListenSockets(std::vector<Listener>& listeners);
+
+        void writeCgiBody(size_t& i, Client* client);
+        void readCgiOutput(size_t& i, Client* client);
+        void finalizeCgiOutput(int client_fd, Client* client);
 };
 
 

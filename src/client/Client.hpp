@@ -9,6 +9,9 @@
 # include <iomanip>
 # include <map>
 # include "../http/Http.hpp"
+# include "../cgi/CgiState.hpp"
+
+
 
 class Client
 {
@@ -22,6 +25,7 @@ class Client
         size_t      _sendLimit;
         struct HttpRequest _httpRequest;
         struct HttpResponse _httpResponse;
+        CgiState* _cgiState;
 
     public:
         Client();
@@ -31,6 +35,9 @@ class Client
 
         void setSocketFd(int socketFd);
         int getSocketFd() const;
+        CgiState* getCgiState();
+        void initializeCgiState(CgiState& state);
+        void cleanupCgiState();
 
         void addBytesSent(size_t bytes);
         void addBytesReceived(ssize_t bytes);
