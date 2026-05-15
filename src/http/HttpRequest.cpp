@@ -90,6 +90,7 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             if (parseRes == PARSE_ERROR)
             {
                 std::cout << "error after request line" << "\n";
+                request.parseResult = PARSE_ERROR;
                 return parseRes;
             }
             else if (parseRes == PARSE_IN_PROGRESS)
@@ -111,7 +112,7 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             if (parseRes == PARSE_ERROR)
             {
                 std::cout << "some error in parse: " << parseRes <<"\n";
-                
+                request.parseResult = PARSE_ERROR;
                 return parseRes;
             }
             else if (parseRes == PARSE_IN_PROGRESS)
