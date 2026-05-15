@@ -310,6 +310,11 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
             client->appendToSendBuffer(serializeHttpResponse(response));
             _poll_fds[i].events = POLLOUT;
         }
+        else if (result.decision == DES_REDIRECT)
+        {
+            client->appendToSendBuffer(serializeHttpResponse(result.response));
+            _poll_fds[i].events = POLLOUT;
+        }
         else if (result.decision == DES_CGI)
         {
             CgiHandler cgi(request, *result.routeConfigure, result.matchResult);
