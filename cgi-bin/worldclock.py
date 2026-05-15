@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+import sys
+import os
+import datetime
+
+CITIES = [
+    ("Amsterdam",      "Europe/Amsterdam",     "🇳🇱"),
+    ("London",         "Europe/London",         "🇬🇧"),
+    ("New York",       "America/New_York",      "🇺🇸"),
+    ("Los Angeles",    "America/Los_Angeles",   "🇺🇸"),
+    ("São Paulo",      "America/Sao_Paulo",     "🇧🇷"),
+    ("Moscow",         "Europe/Moscow",         "🇷🇺"),
+    ("Dubai",          "Asia/Dubai",            "🇦🇪"),
+    ("Tokyo",          "Asia/Tokyo",            "🇯🇵"),
+    ("Sydney",         "Australia/Sydney",      "🇦🇺"),
+    ("Johannesburg",   "Africa/Johannesburg",   "🇿🇦"),
+]
+
+def get_offset(tz_name):
+    """Return UTC offset string like +02:00 using only stdlib."""
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo(tz_name)
+    except Exception:
+        try:
+            import importlib, time
+            os.environ["TZ"] = tz_name
+            time.tzset()
+            offset_sec = -time.timezone if not time.daylight else -time.altzone
+            h, m = divmod(abs(offset_sec) // 60, 60)
+            sign = "+" if offset_sec >= 0 else "-"
+            return f"UTC{sign}{h:02d}:{m:02d}", datetime.datetime.now()
+        except Exception:
+            return "UTC?", datetime.datetime.utcnow()
+    now = datetime.datetime.now(tz)
+    offset = now.utcoffset()
+    total = int(offset.total_seconds())
+    sign = "+" if total >= 0 else "-"
+    h, m = divmod(abs(total) // 60, 60)
+    return f"UTC{sign}{h:02d}:{m:02d}", now
+
+
+def time_bar(hour):
+    """Simple ascii bar showing time of day."""
+    filled = int((hour / 24) * 20)
+    bar = "█" * filled + "░" * (20 - filled)
+    if 6 <= hour < 9:
+        period = "🌅 dawn"
+    elif 9 <= hour < 12:
+        period = "🌤  morning"
+    elif 12 <= hour < 14:
+        period = "☀️  noon"
+    elif 14 <= hour < 18:
+        period = "🌤  afternoon"
+    elif 18 <= hour < 21:
+        period = "🌆 evening"
+    elif 21 <= hour < 24:
+        period = "🌙 night"
+    else:
+        period = "🌑 deep night"
+    return bar, period
+
+
+html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="60">
+<title>🌍 World Clock</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f0f1a;
+    color: #e8e8f0;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 8px;
+    color: #a0c4ff;
+    letter-spacing: 2px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #666;
+    font-size: 0.85rem;
+    margin-bottom: 40px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform .15s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: #4a4aaa; }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .flag { font-size: 1.8rem; }
+  .city { font-size: 1.1rem; font-weight: 600; color: #c0c0ff; }
+  .tz   { font-size: 0.75rem; color: #555; margin-top: 2px; }
+  .time-big {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .date { font-size: 0.85rem; color: #888; margin-bottom: 12px; }
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar {
+    font-size: 0.6rem;
+    color: #4a6aff;
+    letter-spacing: -1px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .period { font-size: 0.75rem; color: #aaa; white-space: nowrap; }
+  .utc-badge {
+    display: inline-block;
+    background: #252550;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    color: #7070cc;
+    margin-top: 8px;
+  }
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #333;
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+<h1>🌍 World Clock</h1>
+<p class="subtitle">Auto-refreshes every 60 seconds &nbsp;·&nbsp; Served by webserv CGI</p>
+<div class="grid">
+"""
+
+for city, tz_name, flag in CITIES:
+    utc_label, now = get_offset(tz_name)
+    time_str = now.strftime("%H:%M:%S")
+    date_str = now.strftime("%A, %d %B %Y")
+    bar, period = time_bar(now.hour)
+
+    html += f"""
+  <div class="card">
+    <div class="card-header">
+      <span class="flag">{flag}</span>
+      <div>
+        <div class="city">{city}</div>
+        <div class="tz">{tz_name}</div>
+      </div>
+    </div>
+    <div class="time-big">{time_str}</div>
+    <div class="date">{date_str}</div>
+    <div class="bar-wrap">
+      <div class="bar">{bar}</div>
+      <div class="period">{period}</div>
+    </div>
+    <div><span class="utc-badge">{utc_label}</span></div>
+  </div>
+"""
+
+html += """
+</div>
+<footer>Generated by worldclock.py &nbsp;·&nbsp; Python CGI &nbsp;·&nbsp; webserv/1.0</footer>
+</body>
+</html>
+"""
+
+body = html.encode("utf-8")
+
+sys.stdout.buffer.write(b"Content-Type: text/html; charset=utf-8\r\n")
+sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n".encode())
+sys.stdout.buffer.write(b"\r\n")
+sys.stdout.buffer.write(body)
+sys.stdout.buffer.flush()
