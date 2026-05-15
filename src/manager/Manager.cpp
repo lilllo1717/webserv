@@ -306,13 +306,13 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         }
         else if (result.decision == DES_NORMAL)
         {
-            HttpResponse response = RequestHandler::executeNormal(request, *result.routeConfig, result.matchResult.selectedServerCon);
+            HttpResponse response = RequestHandler::executeNormal(request, *result.routeConfigure, result.matchResult.selectedServerCon);
             client->appendToSendBuffer(serializeHttpResponse(response));
             _poll_fds[i].events = POLLOUT;
         }
         else if (result.decision == DES_CGI)
         {
-            CgiHandler cgi(request, *result.routeConfig, result.matchResult);
+            CgiHandler cgi(request, *result.routeConfigure, result.matchResult);
             CgiState state;
             if (!cgi.executeCgi(state))
             {

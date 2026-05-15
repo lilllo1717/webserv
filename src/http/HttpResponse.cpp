@@ -204,11 +204,11 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
         matchResult.interpreter = cgiIter->second;
         routerResult.decision = DES_CGI;
         routerResult.matchResult = matchResult;
-        routerResult.routeConfig = bestMatchRouteConfig;
+        routerResult.routeConfigure = bestMatchRouteConfig;
         return routerResult;
     }
     routerResult.decision = DES_NORMAL;
     routerResult.matchResult = matchResult;
-    routerResult.routeConfig = bestMatchRouteConfig;
+    routerResult.routeConfigure = bestMatchRouteConfig;
     return routerResult;
 }

@@ -10,6 +10,7 @@
 # include <map>
 # include <unordered_map>
 # include <memory>
+# include <sys/wait.h>
 # include "../client/Client.hpp"
 # include "../server/Server.hpp"
 # include "../configParser/parser.hpp"
@@ -17,7 +18,7 @@
 # include "../http/Http.hpp"
 # include <arpa/inet.h>
 # include "../cgi/Cgi.hpp"
-#include "../cgi/CgiState.hpp"
+# include "../cgi/CgiState.hpp"
 
 
 

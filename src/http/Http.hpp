@@ -129,8 +129,8 @@ struct RouterResult
     RouteDecision   decision;
     HttpResponse    response;
     RequestMatchResult  matchResult;
-    const routeConfig* routeConfig;
-    const serverConfig* serverConfig;
+    const routeConfig* routeConfigure;
+    const serverConfig* serverConfigure;
 };
 
 
