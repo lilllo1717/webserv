@@ -279,16 +279,28 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
 
     HttpRequestParser::parse(request);
 
+    // if (request.parseResult == PARSE_ERROR)
+    // {
+    //     std::cout << "PARSE_ERROR" << "\n";
+    //     HttpResponse errResp;
+    //     errResp.statusCode = static_cast<HTTP_StatusCode>(400);
+    //     errResp.headers["Content-Length"] = "0";
+    //     errResp.headers["Connection"] = "close";
+    //     client->appendToSendBuffer(serializeHttpResponse(errResp));
+    //     _poll_fds[i].events &= ~POLLIN;
+    //     _poll_fds[i].events |= POLLOUT;
+    // }
     if (request.parseResult == PARSE_ERROR)
     {
-        std::cout << "PARSE_ERROR" << "\n";
         HttpResponse errResp;
-        errResp.statusCode = static_cast<HTTP_StatusCode>(400);
+        // 414 if URI was too long, 400 otherwise
+        errResp.statusCode = (request.parseState == ERROR)
+            ? static_cast<HTTP_StatusCode>(414)
+            : static_cast<HTTP_StatusCode>(400);
         errResp.headers["Content-Length"] = "0";
         errResp.headers["Connection"] = "close";
         client->appendToSendBuffer(serializeHttpResponse(errResp));
-        _poll_fds[i].events &= ~POLLIN;
-        _poll_fds[i].events |= POLLOUT;
+        _poll_fds[i].events = POLLOUT;
     }
     else if (request.parseResult == PARSE_DONE)
     {
@@ -301,13 +313,21 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
 
         if (result.decision == DES_ERROR)
         {
+            result.response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(result.response));
             _poll_fds[i].events = POLLOUT;
         }
         else if (result.decision == DES_NORMAL)
         {
             HttpResponse response = RequestHandler::executeNormal(request, *result.routeConfigure, result.matchResult.selectedServerCon);
+            response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(response));
+            _poll_fds[i].events = POLLOUT;
+        }
+        else if (result.decision == DES_REDIRECT)
+        {
+            result.response.closeConnection = !request.keepAlive;
+            client->appendToSendBuffer(serializeHttpResponse(result.response));
             _poll_fds[i].events = POLLOUT;
         }
         else if (result.decision == DES_CGI)
