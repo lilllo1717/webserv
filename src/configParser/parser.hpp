@@ -13,27 +13,31 @@
 struct routeConfig 
 {
 	std::string					path;
+
 	std::vector<std::string>	httpMethods;	// GET, POST, and DELETE
+	bool						methodsSet = false;
+
 	std::string					rootDir; // directory to serve
+	bool						rootSet = false;
+
 	std::string					index; // default file
+	bool						indexSet = false;
 
 	bool						autoindex = false;
+	bool						autoindexSet = false;
 
 	bool						isRedirect = false;
+
 	int							redirectCode = 0;
 	std::string					redirectTarget;
 
 	bool						allow_upload = true; // turns on and off the upload feature
+
 	std::string					uploadPath; // where to store uploaded files
+	bool						uploadStoreSet = false;
 
 	std::map<std::string, std::string>	cgi;
 };
-
-// struct listenConfig
-// {
-// 	std::string	host;
-// 	int			port;
-// };
 
 struct serverEndpoint
 {
@@ -48,7 +52,10 @@ struct serverConfig
 	// std::vector<serverEndpoint>	listen; // IP address of server
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::map<int, std::string>	errorPages; // 404, 400, 500, etc.
+
 	size_t						clientMaxBodySize = 0;
+	bool						bodySizeSet = false;
+
 	std::vector<routeConfig>	routes; // routes inside this server
 };
 

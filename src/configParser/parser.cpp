@@ -101,6 +101,11 @@ static bool	isValidMethod(const std::string& method)
 
 void	Parser::parseMethodsDirective(routeConfig& rC)
 {
+	if (rC.methodsSet)
+		throwError("Duplicate methods directive");
+
+	rC.methodsSet = true;
+
 	if (currentPosition().type != tokenType::TOKEN_WORD)
 		throwError("There should be at least one HTTP method after 'methods'");
 
@@ -110,6 +115,10 @@ void	Parser::parseMethodsDirective(routeConfig& rC)
 		&& isValidMethod(currentPosition().value))
 	{
 		const std::string&	value = currentPosition().value;
+
+		if (std::find(rC.httpMethods.begin(), rC.httpMethods.end(), value) != rC.httpMethods.end())
+			throwError("Duplicate HTTP method");
+
 		rC.httpMethods.push_back(value);
 		moveForward();
 		parsedAtLeastOne = true;
@@ -122,6 +131,11 @@ void	Parser::parseMethodsDirective(routeConfig& rC)
 
 void	Parser::parseRootDirective(routeConfig& rC)
 {
+	if (rC.rootSet)
+		throwError("Duplicate root directive");
+
+	rC.rootSet = true;
+
 	const Token&	root = verifyToken(tokenType::TOKEN_WORD, "Expected route path after 'root' directive");
 	rC.rootDir = root.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after root value");
@@ -129,6 +143,11 @@ void	Parser::parseRootDirective(routeConfig& rC)
 
 void	Parser::parseIndexDirective(routeConfig& rC)
 {
+	if (rC.indexSet)
+		throwError("Duplicate index directive");
+	
+	rC.indexSet = true;
+
 	const Token&	index = verifyToken(tokenType::TOKEN_WORD, "Expected index value after 'index' directive");
 	rC.index = index.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after index value");
@@ -136,6 +155,11 @@ void	Parser::parseIndexDirective(routeConfig& rC)
 
 void	Parser::parseAutoindexDirective(routeConfig& rC)
 {
+	if (rC.autoindexSet)
+		throwError("Duplicate autoindex directive");
+
+	rC.autoindexSet = true;
+
 	const Token&	autoindex = verifyToken(tokenType::TOKEN_WORD, "Expected autoindex value after 'autoindex' directive");
 
 	if (autoindex.value == "on")
@@ -150,6 +174,11 @@ void	Parser::parseAutoindexDirective(routeConfig& rC)
 
 void	Parser::parseUploadStoreDirective(routeConfig& rC)
 {
+	if (rC.uploadStoreSet)
+		throwError("Duplicate upload_store directive");
+	
+	rC.uploadStoreSet = true;
+
 	rC.allow_upload = true;
 	const Token&	upload_store = verifyToken(tokenType::TOKEN_WORD, "Expected upload path after 'upload_store' directive");
 	rC.uploadPath = upload_store.value;
@@ -191,6 +220,7 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 	moveForward();
 
 	rC.cgi[extension] = executable;
+
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
 }
 
@@ -210,6 +240,9 @@ void	Parser::isValidStatusCode(int code, bool directive)
 
 void	Parser::parseReturnDirective(routeConfig& rC)
 {
+	if (rC.isRedirect)
+		throwError("Duplicate return directive");
+
 	rC.isRedirect = true;
 
 	if (currentPosition().type != tokenType::TOKEN_WORD || currentPosition().value.empty()
@@ -336,13 +369,9 @@ void	Parser::parseListenDirective(serverConfig& sC)
 
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after listen value");
 
-	// Preventing duplicates
-	// for (size_t i = 0; i < sC.listen.size(); i++)
-	// {
-	// 	if (sC.listen[i].ip == host && sC.listen[i].port == port)
-	// 		throwError("Duplicate listen values");	
-	// }
-
+	if (sC.endpoint.ip == host && sC.endpoint.port == port)
+		throwError("Duplicate listen values");	
+	
 	// sC.listen.push_back(serverEndpoint{host, port});
 
 	sC.endpoint.ip = host;
@@ -354,18 +383,20 @@ static bool	isValidServerName(const std::string& name)
 	if (name.empty())
 		return false;
 
-	size_t	start = 0;
+	// size_t	start = 0;
 
-	if (start == name.size())
+	// if (start == name.size())
+	// 	return false;
+	
+	// if (name[start] == '.' || name.back() == '.')
+	// 	return false;
+	if (name.front() == '.' || name.back() == '.')
 		return false;
 	
-	if (name[start] == '.' || name.back() == '.')
-		return false;
-	
-	for (size_t i = start; i < name.size(); ++i)
+	for (size_t i = 0; i < name.size(); ++i)
 	{
 		char c = name[i];
-		if (!std::isalnum(c) || c == '-' || c == '.')
+		if (!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '.')
 			return false;
 	}
 	return true;
@@ -376,11 +407,16 @@ void	Parser::parseServerNameDirective(serverConfig& sC)
 	bool	parsedAtLeastOne = false;
 
 	while (currentPosition().type == tokenType::TOKEN_WORD
-		&& !isValidServerName(currentPosition().value))
+		&& isValidServerName(currentPosition().value))
 	{
-		sC.serverNames.push_back(currentPosition().value);
+		const std::string	value = currentPosition().value;
+
+		if (std::find(sC.serverNames.begin(), sC.serverNames.end(), value) != sC.serverNames.end())
+			throwError("Duplicate server name");
+
+		sC.serverNames.push_back(value);
 		moveForward();
-		parsedAtLeastOne = true;
+		parsedAtLeastOne = true; 
 	}
 	if (!parsedAtLeastOne)
 		throwError("There should be at least one server name");
@@ -390,6 +426,11 @@ void	Parser::parseServerNameDirective(serverConfig& sC)
 
 void	Parser::parseBodySizeDirective(serverConfig& sC)
 {
+	if (sC.bodySizeSet)
+		throwError("Duplicate client_max_body_size directive");
+	
+	sC.bodySizeSet = true;
+
 	const Token&	bodySize = verifyToken(tokenType::TOKEN_WORD, "Expected number size after 'client_max_body_size' directive");
 	
 	try
