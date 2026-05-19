@@ -84,7 +84,7 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
     {
         if (request.parseState == REQ_LINE)
         {
-            std::cout << "parse -> request.buffer: " << request.buffer << "\n";
+            // std::cout << "parse -> request.buffer: " << request.buffer << "\n";
 
             ParseResult parseRes = parseRequestLine(request);
             if (parseRes == PARSE_ERROR)
@@ -129,7 +129,10 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
                 return PARSE_DONE;
             }
             else if (typeRes == UNSUPPORTED)
+            {
+                request.parseResult = PARSE_ERROR;
                 return PARSE_ERROR;
+            }
             else
                 request.parseState = BODY;
             continue;
@@ -140,7 +143,10 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             // std::cout << "entered body parsing" << "\n";
             ParseResult parseRes = parseBody(request);
             if (parseRes == PARSE_ERROR)
+            {
+                request.parseResult = PARSE_ERROR;
                 return parseRes;
+            }
             else if (parseRes == PARSE_IN_PROGRESS)
                 return parseRes;
             request.parseResult = PARSE_DONE;

@@ -7,7 +7,7 @@ class RequestHandler
 {
 	public:
 		static HttpResponse	executeNormal(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
-	
+		static HttpResponse buildErrorResponse(HTTP_StatusCode code, const serverConfig& config);
 	private:
 		static std::string	resolvePath(const HttpRequest& request, const routeConfig& route);
 		static bool			isDirectory(const std::string& path);
@@ -18,7 +18,7 @@ class RequestHandler
 		static HttpResponse	handleGET(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
 		static HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
 		static HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
-		static HttpResponse buildErrorResponse(HTTP_StatusCode code, const serverConfig& config);
+		// static HttpResponse buildErrorResponse(HTTP_StatusCode code, const serverConfig& config);
 
 };
 

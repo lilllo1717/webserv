@@ -267,13 +267,23 @@ bool CgiHandler::executeChild()
     }
     close(_stdInPipe[0]);
     close(_stdOutPipe[1]);
-    char* argv[] = {
-    const_cast<char*>(_interpreter.c_str()),
-    const_cast<char*>(_scriptPath.c_str()),
-    nullptr
-    };
-    // char* interp = const_cast<char*>(_interpreter.c_str());
-    execve(_interpreter.c_str(), argv, _envp.data());
+    if (_interpreter.empty())
+    {
+        char* argv[] = {
+            const_cast<char*>(_scriptPath.c_str()),
+            nullptr
+        };
+        execve(_scriptPath.c_str(), argv, _envp.data());
+    }
+    else
+    {
+        char* argv[] = {
+            const_cast<char*>(_interpreter.c_str()),
+            const_cast<char*>(_scriptPath.c_str()),
+            nullptr
+        };
+        execve(_interpreter.c_str(), argv, _envp.data());
+    }
     std::cerr << "execve failed: " << strerror(errno) << "\n";
     closePipes();
     exit(1);

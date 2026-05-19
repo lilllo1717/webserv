@@ -40,9 +40,8 @@ void CgiHandler::buildEnvVars()
         _envStrings.push_back("QUERY_STRING=" + _request.uri_query);
     else
         _envStrings.push_back("QUERY_STRING=");
-    _envStrings.push_back("PATH_INFO=");
+
     _envStrings.push_back("REDIRECT_STATUS=200");
-    _envStrings.push_back("PATH_TRANSLATED=");
     _envStrings.push_back("REMOTE_ADDR=" + _configResult.remoteAddress);
     _envStrings.push_back("REMOTE_HOST=" + _configResult.remoteAddress);
     _envStrings.push_back("SERVER_NAME=" + getServerName(_request.host));
@@ -50,6 +49,7 @@ void CgiHandler::buildEnvVars()
     _envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
     _envStrings.push_back("SERVER_SOFTWARE=webserv/1.0");
     _envStrings.push_back("SCRIPT_NAME=" + _request.uri_path);
+    _envStrings.push_back("REQUEST_URI=" + _request.unparsed_uri);
     // std::cout << "SCRIPT_NAME=" << _request.uri_path << "\n";
 
 
@@ -60,6 +60,15 @@ void CgiHandler::buildEnvVars()
     _scriptPath = _config.rootDir + _scriptPath;
     _envStrings.push_back("SCRIPT_FILENAME=" + _scriptPath);
     std::cout << "!!!SCRIPT_FILENAME=" << _scriptPath << "\n";
+
+    std::string pathInfo = _request.uri_path.substr(_config.path.size());
+    // size_t scriptEnd = pathInfo.find('/', 1);
+    // if (scriptEnd != std::string::npos)
+    //     pathInfo = pathInfo.substr(scriptEnd);
+    // else
+    //     pathInfo = "";
+    _envStrings.push_back("PATH_INFO=" + _request.unparsed_uri);
+    _envStrings.push_back("PATH_TRANSLATED=" + _scriptPath);
 
     for (const auto& header: _request.headers)
     {

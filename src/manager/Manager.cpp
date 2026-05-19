@@ -241,9 +241,18 @@ void Manager::responseToClient(size_t& i)
 
     if (keepAlive)
     {
+        std::string leftover = client->getHttpRequest().buffer;
+        // std::cout << "DEBUG keepAlive leftover size: " << leftover.size() 
+        //         << " [" << leftover.substr(0, 50) << "]\n";
         client->getHttpRequest() = HttpRequest();
         _poll_fds[i].events &= ~POLLOUT;
         _poll_fds[i].events |=  POLLIN;
+
+        if (!leftover.empty())
+        {
+            client->getHttpRequest().buffer = leftover;
+            processClientRequest(i, nullptr, 0);
+        }
     }
 
     else
@@ -271,12 +280,18 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     //     HttpResponse response;
     //     response.statusCode = static_cast<HTTP_StatusCode>(413);
     // }
-    request.buffer.append(temp_buffer, message_size);
-    std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
+    // request.buffer.append(temp_buffer, message_size);
+    if (temp_buffer != nullptr && message_size > 0)
+    {
+        request.buffer.append(temp_buffer, message_size);
+    }
+    // std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
 
     
 
     HttpRequestParser::parse(request);
+    std::cout << "DEBUG parseResult=" << request.parseResult 
+          << " parseState=" << request.parseState << "\n";
 
     // if (request.parseResult == PARSE_ERROR)
     // {
@@ -292,10 +307,16 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     if (request.parseResult == PARSE_ERROR)
     {
         HttpResponse errResp;
-        // 414 if URI was too long, 400 otherwise
-        errResp.statusCode = (request.parseState == ERROR)
-            ? static_cast<HTTP_StatusCode>(414)
-            : static_cast<HTTP_StatusCode>(400);
+        if (request.method == HTTP_UNKNOWN)
+        {
+            errResp.statusCode = static_cast<HTTP_StatusCode>(405);
+        }
+        else
+        {
+            errResp.statusCode = (request.parseState == ERROR)
+                ? static_cast<HTTP_StatusCode>(414)
+                : static_cast<HTTP_StatusCode>(400);
+        }
         errResp.headers["Content-Length"] = "0";
         errResp.headers["Connection"] = "close";
         client->appendToSendBuffer(serializeHttpResponse(errResp));
@@ -312,13 +333,16 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
 
         if (result.decision == DES_ERROR)
         {
+            HttpResponse errResp = RequestHandler::buildErrorResponse(result.response.statusCode, result.matchResult.selectedServerCon);
             result.response.closeConnection = !request.keepAlive;
-            client->appendToSendBuffer(serializeHttpResponse(result.response));
+            client->appendToSendBuffer(serializeHttpResponse(errResp));
             _poll_fds[i].events = POLLOUT;
         }
         else if (result.decision == DES_NORMAL)
         {
             HttpResponse response = RequestHandler::executeNormal(request, *result.routeConfigure, result.matchResult.selectedServerCon);
+            std::cout << "DEBUG DES_NORMAL body.size=" << response.body.size() 
+              << " Content-Length=" << response.headers["Content-Length"] << "\n";
             response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(response));
             _poll_fds[i].events = POLLOUT;

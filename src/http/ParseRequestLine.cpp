@@ -195,7 +195,10 @@ ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, Htt
     request.method = parseMethodChunk(requestLine, cursor);
     // std::cout << "request method: " << request.method << "\n";
     if (request.method == HTTP_UNKNOWN)
+    {
+        request.parseState = ERROR;
         return PARSE_ERROR;
+    }
     cursor.skip_spaces();
     if (parseUriChunk(requestLine, cursor, request) == PARSE_ERROR)
         return PARSE_ERROR;
