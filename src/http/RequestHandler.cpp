@@ -13,8 +13,8 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
 		errorPage.statusCode = code;
 		return errorPage;
     }
-
-    std::string phrase(reasonPhrase(code));
+	
+	std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
     std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
     response.body.assign(body.begin(), body.end());
     response.headers["Content-Type"] = "text/html";
