@@ -14,12 +14,15 @@ import random
 import string
 
 # ──────────────────────────────────────────────
-# Config
+# Config — root auto-detected from script location
 # ──────────────────────────────────────────────
 DEFAULT_HOST  = "127.0.0.1"
 DEFAULT_PORT  = 8080
 
-IMAGE_PATH    = "/home/tignatov/webserv_git/uploads/cat.jpg"
+# Always resolves to the directory containing this script
+PROJECT_ROOT  = os.path.dirname(os.path.abspath(__file__))
+
+IMAGE_PATH    = os.path.join(PROJECT_ROOT, "uploads", "cat.jpg")
 UPLOAD_URL    = "/cgi-bin/image.php"
 DOWNLOAD_URL  = "/uploads/cgi_upload.jpg"
 CGI_INFO_URL  = "/cgi-bin/info.py"
@@ -935,7 +938,7 @@ def test_delete_file(host, port):
 
     # First upload a file via CGI
     test_filename = "delete_test.txt"
-    upload_path = f"/home/tignatov/webserv_git/uploads/{test_filename}"
+    upload_path = os.path.join(PROJECT_ROOT, "uploads", test_filename)
 
     # Create the file directly for the test
     try:
