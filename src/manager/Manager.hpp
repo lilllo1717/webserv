@@ -19,6 +19,8 @@
 # include <arpa/inet.h>
 # include "../cgi/Cgi.hpp"
 # include "../cgi/CgiState.hpp"
+# include "../http/RequestHandler.hpp"
+
 
 
 
