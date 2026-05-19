@@ -14,12 +14,15 @@ import random
 import string
 
 # ──────────────────────────────────────────────
-# Config
+# Config — root auto-detected from script location
 # ──────────────────────────────────────────────
 DEFAULT_HOST  = "127.0.0.1"
 DEFAULT_PORT  = 8080
 
-IMAGE_PATH    = "/home/tignatov/webserv_git/uploads/cat.jpg"
+# Always resolves to the directory containing this script
+PROJECT_ROOT  = os.path.dirname(os.path.abspath(__file__))
+
+IMAGE_PATH    = os.path.join(PROJECT_ROOT, "uploads", "cat.jpg")
 UPLOAD_URL    = "/cgi-bin/image.php"
 DOWNLOAD_URL  = "/uploads/cgi_upload.jpg"
 CGI_INFO_URL  = "/cgi-bin/info.py"
@@ -935,7 +938,7 @@ def test_delete_file(host, port):
 
     # First upload a file via CGI
     test_filename = "delete_test.txt"
-    upload_path = f"/home/tignatov/webserv_git/uploads/{test_filename}"
+    upload_path = os.path.join(PROJECT_ROOT, "uploads", test_filename)
 
     # Create the file directly for the test
     try:
@@ -1325,7 +1328,7 @@ def test_deep_path(host, port):
     resp2 = raw_request(host, port, raw2, timeout=5)
     body2 = resp2[resp2.find(b"\r\n\r\n")+4:] if b"\r\n\r\n" in resp2 else b""
     check("100x ../ traversal → no passwd",
-      b"root:x:" not in resp2, resp2[:200])
+          b"root:x:" not in body2, body2[:50])
     check("Server alive after dotty path", server_alive(host, port))
 
 
@@ -1445,8 +1448,9 @@ def test_request_line_spaces(host, port):
     # Leading spaces before method
     raw3 = f"  GET / HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
     resp3 = raw_request(host, port, raw3, timeout=5)
-    check("Leading spaces before method → 4xx or 200",
-      len(resp3) == 0 or resp3[:8] == b"HTTP/1.1", resp3[:20])
+    check("Leading spaces before method → 4xx",
+          len(resp3) == 0 or (resp3[:8] == b"HTTP/1.1" and b" 4" in resp3[:12]),
+          resp3[:20])
 
     check("Server alive after space variants", server_alive(host, port))
 
@@ -1530,9 +1534,9 @@ def test_cgi_env_injection(host, port):
         return
     body_str = body.decode(errors="replace")
     check("Query with newline → 200 or 400",  r.status in (200, 400), r.status)
-    check("Injected env var not in response headers",
-      "HTTP_INJECTED" not in body_str or "evil" not in body_str.split("query_string")[-1],
-      body_str[:200])
+    check("Injected env var not in output",
+          "HTTP_INJECTED" not in body_str or "evil" not in body_str,
+          body_str[:200])
 
     # Null byte in query string
     r2, body2 = get(host, port, f"{CGI_INFO_URL}?foo=bar%00baz")

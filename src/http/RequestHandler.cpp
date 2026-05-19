@@ -248,70 +248,18 @@ HttpResponse RequestHandler::handlePOST(const HttpRequest& request, const routeC
     return constructResponse(response);
 }
 
-// HttpResponse	RequestHandler::handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
-// {
-// 	HttpResponse response;
-
-// 	std::cout << "=== HANDLE POST ===\n";
-//     std::cout << "route.uploadPath = [" << route.uploadPath << "]\n";
-//     std::cout << "route.rootDir    = [" << route.rootDir << "]\n";
-//     std::cout << "request.uri_path = [" << request.uri_path << "]\n";
-//     std::cout << "body size        = [" << request.body.size() << "]\n";
-
-// 	if (route.uploadPath.empty())
-// 	{
-// 		response.statusCode = static_cast<HTTP_StatusCode>(403);
-// 		return constructResponse(response);
-// 	}
-
-// 	size_t	pos = request.uri_path.find_last_of('/');
-// 	std::string	filename = request.uri_path.substr(pos + 1);
-
-// 	if (filename.empty())
-// 		filename = "upload.bin"; // fallback incase file is empty 
-
-// 	std::string fullPath = route.uploadPath + "/" + filename;
-
-// 	std::ofstream out(fullPath.c_str(), std::ios::binary);
-// 	if (!out)
-// 	{
-// 		// response.statusCode = static_cast<HTTP_StatusCode>(403);
-// 		// return constructResponse(response);
-// 		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
-// 	}
-
-// 	out.write(reinterpret_cast<const char*>(request.body.data()), request.body.size());
-// 	out.close();
-
-// 	response.statusCode = static_cast<HTTP_StatusCode>(201);
-// 	response.headers["Content-Length"] = "0";
-
-// 	return constructResponse(response);
-// }
-
 HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const routeConfig& route, const serverConfig& config)
 {
 	HttpResponse	response;
 	std::string		path = resolvePath(request, route);
 
-	// Allow DELETE in upload directory
-	// if (route.rootDir != "./uploads")
-	// {
-    // 	response.statusCode = static_cast<HTTP_StatusCode>(403);
-   	// 	return constructResponse(response);
-	// }
-
 	struct stat	s;
 	if (stat(path.c_str(), &s) != 0)
 	{
-		// response.statusCode = static_cast<HTTP_StatusCode>(404);
-		// return constructResponse(response);
 		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);
 	}
 	if (S_ISDIR(s.st_mode))
 	{
-		// response.statusCode = static_cast<HTTP_StatusCode>(403);
-		// return constructResponse(response);
 		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
 	}
 	if (remove(path.c_str()) != 0)

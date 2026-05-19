@@ -1,4 +1,4 @@
-CXX             = g++
+CXX             = c++
 RM              = rm -f
 CFLAGS          = -Wall -Wextra -Werror -std=c++17
 INCLUDES        = -I include
