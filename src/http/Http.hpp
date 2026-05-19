@@ -258,8 +258,6 @@ bool is_hex(char c);
 void lowerLettersInHeaders(std::string& header);
 HttpResponse constructResponse(HttpResponse& response);
 
-
-
 constexpr std::string_view reasonPhrase(HTTP_StatusCode status)
 {
     switch (status)

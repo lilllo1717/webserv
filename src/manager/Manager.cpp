@@ -2,7 +2,6 @@
 #include "Manager.hpp"
 #include "../../include/webserv.hpp"
 
-
 Manager::Manager()
     :
         _recvBufferSize(100000),

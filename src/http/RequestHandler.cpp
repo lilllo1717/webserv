@@ -135,10 +135,7 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	if (!file)
 	{
 		std::cout << "File not found!\n";
-		// response.statusCode = static_cast<HTTP_StatusCode>(404);
-		// return constructResponse(response);
 		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);
-
 	}
 	
 	std::vector<uint8_t> fileData(
@@ -150,7 +147,7 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	response.body = std::move(fileData);
 
 	std::cout << "serveStaticFile path: [" << path << "]\n";
-	std::cout << "fileData size: " << fileData.size() << "\n";
+	std::cout << "body size: " << response.body.size() << "\n";
 
 	response.headers["Content-Length"] = std::to_string(response.body.size());
 	response.headers["Content-Type"] = getMimeType(path);
@@ -286,11 +283,11 @@ HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const rout
 	std::string		path = resolvePath(request, route);
 
 	// Allow DELETE in upload directory
-	if (route.rootDir != "./uploads")
-	{
-    	response.statusCode = static_cast<HTTP_StatusCode>(403);
-   		return constructResponse(response);
-	}
+	// if (route.rootDir != "./uploads")
+	// {
+    // 	response.statusCode = static_cast<HTTP_StatusCode>(403);
+   	// 	return constructResponse(response);
+	// }
 
 	struct stat	s;
 	if (stat(path.c_str(), &s) != 0)
