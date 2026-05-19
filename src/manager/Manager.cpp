@@ -278,6 +278,8 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     
 
     HttpRequestParser::parse(request);
+    std::cout << "DEBUG parseResult=" << request.parseResult 
+          << " parseState=" << request.parseState << "\n";
 
     // if (request.parseResult == PARSE_ERROR)
     // {
@@ -320,6 +322,8 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         else if (result.decision == DES_NORMAL)
         {
             HttpResponse response = RequestHandler::executeNormal(request, *result.routeConfigure, result.matchResult.selectedServerCon);
+            std::cout << "DEBUG DES_NORMAL body.size=" << response.body.size() 
+              << " Content-Length=" << response.headers["Content-Length"] << "\n";
             response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(response));
             _poll_fds[i].events = POLLOUT;

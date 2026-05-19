@@ -207,6 +207,23 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
         routerResult.routeConfigure = bestMatchRouteConfig;
         return routerResult;
     }
+    if (extensionFromRequest.empty())
+    {
+        std::string filePath = bestMatchRouteConfig->rootDir
+                            + request.uri_path.substr(bestMatchRouteConfig->path.size());
+        std::cout << "DEBUG stat check: [" << filePath << "]\n";  // ← add this
+        struct stat st;
+        if (stat(filePath.c_str(), &st) == 0 && !S_ISDIR(st.st_mode) && (st.st_mode & S_IXUSR))
+        {
+            std::cout << "DEBUG file is executable → DES_CGI\n";  // ← add this
+            matchResult.interpreter = "";
+            routerResult.decision = DES_CGI;
+            routerResult.matchResult = matchResult;
+            routerResult.routeConfigure = bestMatchRouteConfig;
+            return routerResult;
+        }
+        std::cout << "DEBUG stat failed or not executable\n";  // ← add this
+    }
     routerResult.decision = DES_NORMAL;
     routerResult.matchResult = matchResult;
     routerResult.routeConfigure = bestMatchRouteConfig;
