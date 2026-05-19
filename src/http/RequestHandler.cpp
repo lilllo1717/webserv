@@ -6,14 +6,28 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     response.statusCode = code;
 
     int codeInt = static_cast<int>(code);
+
+	// DEBUG OUTPUT
+	// std::cerr << "Looking for error page: " << codeInt << std::endl;
+
+	// for (std::map<int, std::string>::const_iterator it2 = config.errorPages.begin();
+    //  it2 != config.errorPages.end(); ++it2)
+	// {
+    // 	std::cerr << "Configured error page: "
+    //           	<< it2->first
+    //           	<< " -> "
+    //           	<< it2->second
+    //           	<< std::endl;
+	// 
+
     auto it = config.errorPages.find(codeInt);
     if (it != config.errorPages.end())
     {
+		
         HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
 		errorPage.statusCode = code;
 		return errorPage;
     }
-	
 	std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
     std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
     response.body.assign(body.begin(), body.end());
@@ -135,7 +149,8 @@ HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
 	if (!file)
 	{
 		std::cout << "File not found!\n";
-		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);
+		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);;
+
 	}
 	
 	std::vector<uint8_t> fileData(
@@ -174,9 +189,6 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 				uri += '/';
 			return buildAutoindex(path, uri);
 		}
-		
-		// response.statusCode = static_cast<HTTP_StatusCode>(403);
-		// return constructResponse(response);
 		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
 	}
 	return serveStaticFile(path);
