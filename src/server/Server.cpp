@@ -19,6 +19,7 @@ Server::Server()
         _started(false),
         _reusableAddress(false),
         _optionKeepAlive(false),
+        _clients(),
         _bytesSent(0),
         _bytesReceived(0)
         
@@ -35,6 +36,7 @@ Server::Server(const serverConfig& config)
         _started(false),
         _reusableAddress(false),
         _optionKeepAlive(false),
+        _clients(),
         _bytesSent(0),
         _bytesReceived(0)
         

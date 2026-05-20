@@ -178,22 +178,44 @@ void Manager::acceptNewConnection(int listenerFd, size_t listenerIndex)
         struct sockaddr_in client_address;
         client_len = sizeof(client_address);
         int new_socket_fd = accept(listenerFd, (struct sockaddr*)&client_address, &client_len);
-        
         if (new_socket_fd < 0)
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            int saved_errno = errno;
+            if (saved_errno == EAGAIN || saved_errno == EWOULDBLOCK)
                 break;
-            // _started = false;
+            std::cerr << "accept failed: " << strerror(saved_errno) << "\n";
             break;
         }
         int flags = fcntl(new_socket_fd, F_GETFL, 0);
+        if (flags < 0)
+        {
+            std::cerr << "fcntl F_GETFL failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
         flags = flags | O_NONBLOCK;
-        fcntl(new_socket_fd, F_SETFL, flags);
+        if (fcntl(new_socket_fd, F_SETFL, flags) < 0)
+        {
+            std::cerr << "fcntl F_SETFL failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
 
         int fdflags = fcntl(new_socket_fd, F_GETFD, 0);
+        if (fdflags < 0)
+        {
+            std::cerr << "fcntl F_GETFD failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
         fdflags = fdflags | FD_CLOEXEC;
-        fcntl(new_socket_fd, F_SETFD, fdflags);
-        
+        if (fcntl(new_socket_fd, F_SETFD, fdflags) < 0)
+        {
+            std::cerr << "fcntl F_SETFD failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
+
         _clientFdToRemoteAddress[new_socket_fd] = inet_ntoa(client_address.sin_addr);
         _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
         addClient(new_socket_fd);
@@ -483,7 +505,7 @@ int Manager::run()
         {
             if (errno == EINTR)
                 continue;
-            std::cerr << "poll failed.\n";
+            std::cerr << "poll failed: " << strerror(errno) << "\n";
             closeListenSockets(_listeners);
             return -1;
         }
