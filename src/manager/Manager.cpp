@@ -430,15 +430,22 @@ void Manager::closeListenSockets(std::vector<Listener>& listeners)
     }
 }
 
+void Manager::cleanupClient(int client_fd, size_t& i)
+{
+
+    close(client_fd);
+    removeClient(client_fd);
+    _poll_fds.erase(_poll_fds.begin() + i);
+    --i;
+}
+
 void Manager::receiveDataFromClient(size_t& i)
 {
     int client_fd = _poll_fds[i].fd;
     Client* client = getClient(client_fd);
     if (!client)
     {
-        close(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return;
     }
     
@@ -447,10 +454,7 @@ void Manager::receiveDataFromClient(size_t& i)
     if (message_size == 0)
     {
         // Client disconnected
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return;
     }
     else if (message_size < 0)
@@ -461,13 +465,10 @@ void Manager::receiveDataFromClient(size_t& i)
             return;
         }
         std::cerr << "recv error on fd " << client_fd << ": " << strerror(errno) << "\n";
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return;
     }
-    else if (static_cast<size_t>(client->getBytesReceived()) + static_cast<size_t>(message_size) > _recvBufferSize)
+    else if (client->getBytesReceived() + static_cast<size_t>(message_size) > _recvBufferSize)
     {
         HttpResponse response;
         response.statusCode = static_cast<HTTP_StatusCode>(413);
@@ -475,13 +476,13 @@ void Manager::receiveDataFromClient(size_t& i)
         response.headers["Connection"] = "close";
         std::string rawResponse = serializeHttpResponse(response);
         client->appendToSendBuffer(rawResponse);
+        client->getHttpRequest().keepAlive = false;
         _poll_fds[i].events &= ~POLLIN;
         _poll_fds[i].events |= POLLOUT;
         return;
     }
     client->addBytesReceived(message_size);
     processClientRequest(i, temp_buffer, message_size);
-
 }
 
 
@@ -549,10 +550,7 @@ int Manager::run()
             {
                 if (_poll_fds[i].revents & (POLLHUP | POLLERR))
                 {
-                    close(fd);
-                    removeClient(fd);
-                    _poll_fds.erase(_poll_fds.begin() + i);
-                    --i;
+                    cleanupClient(_poll_fds[i].fd, i);
                     continue;
                 }
                 if (_poll_fds[i].revents & POLLIN)
