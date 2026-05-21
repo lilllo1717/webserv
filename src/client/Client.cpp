@@ -128,6 +128,11 @@ void Client::addBytesReceived(ssize_t bytes)
     _bytesReceived += bytes;
 }
 
+void Client::resetBytesReceived()
+{
+    _bytesReceived = 0;
+}
+
 ssize_t Client::getBytesReceived() const
 {
     return _bytesReceived;

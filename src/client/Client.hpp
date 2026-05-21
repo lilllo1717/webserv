@@ -41,6 +41,7 @@ class Client
 
         void addBytesSent(size_t bytes);
         void addBytesReceived(ssize_t bytes);
+        void resetBytesReceived();
         size_t getBytesSent() const;
         
         // void addBytesReceived(size_t bytes);

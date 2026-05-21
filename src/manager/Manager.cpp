@@ -40,8 +40,7 @@ std::vector<std::unique_ptr<Server>>& Manager::getServers()
 
 void Manager::addClient(int socketFd)
 {
-    _clients[socketFd] = std::make_unique<Client>(socketFd);
-    // _clientFdToServer[socketFd] = server;
+        _clients[socketFd] = std::make_unique<Client>(socketFd);
 }
 
 void Manager::removeClient(int socketFd)
@@ -178,6 +177,7 @@ void Manager::acceptNewConnection(int listenerFd, size_t listenerIndex)
         struct sockaddr_in client_address;
         client_len = sizeof(client_address);
         int new_socket_fd = accept(listenerFd, (struct sockaddr*)&client_address, &client_len);
+        // std::cout << "DEBUG accept new connection: fd=" << new_socket_fd << "\n";
         if (new_socket_fd < 0)
         {
             int saved_errno = errno;
@@ -215,11 +215,13 @@ void Manager::acceptNewConnection(int listenerFd, size_t listenerIndex)
             close(new_socket_fd);
             return;
         }
-
-        _clientFdToRemoteAddress[new_socket_fd] = inet_ntoa(client_address.sin_addr);
-        _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
         addClient(new_socket_fd);
+        _clientFdToRemoteAddress[new_socket_fd] = inet_ntoa(client_address.sin_addr);
+        std::cout << "DEBUG: New connection from " << _clientFdToRemoteAddress[new_socket_fd] 
+                  << " on fd " << new_socket_fd << "\n";
         _clientFdToListenerIndex[new_socket_fd] = listenerIndex;
+        std::cout << "DEBUG: Assigned listener index " << listenerIndex << " to client fd " << new_socket_fd << "\n";
+        _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
     }
 }
 
@@ -349,6 +351,7 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     {
         // std::cout << "!!!!!!!!!!!Content type: " << request.contentType << "\n";
         // std::cout << "PARSE_DONE" << "\n";
+        client->resetBytesReceived();
         size_t listen_index = _clientFdToListenerIndex[client_fd];
         Listener& listener = _listeners[listen_index];
         RouterResult result = _router.handleRequest(request, listener, _clientFdToRemoteAddress[client_fd]);
