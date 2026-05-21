@@ -235,11 +235,7 @@ void Manager::responseToClient(size_t& i)
     const std::string& sendBuffer = client->getSendBuffer();
     if (sendBuffer.empty())
     {
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        // _poll_fds[i].events &= ~POLLOUT;
-        --i;
+        cleanupClient(client_fd, i);
         return ;
     }
     ssize_t bytes_sent = send(client_fd, sendBuffer.c_str(), sendBuffer.size(), 0);
@@ -250,10 +246,7 @@ void Manager::responseToClient(size_t& i)
             return ;
         }
         std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return ;
     }
 
@@ -279,15 +272,8 @@ void Manager::responseToClient(size_t& i)
             processClientRequest(i, nullptr, 0);
         }
     }
-
     else
-    {
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
-    }
-    
+        cleanupClient(client_fd, i); 
 }
 
 // void Manager::processClientRequest(size_t& i, std::string temp_buffer, ssize_t message_size)
