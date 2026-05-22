@@ -269,6 +269,7 @@ void Manager::responseToClient(size_t& i)
         if (!leftover.empty())
         {
             client->getHttpRequest().buffer = leftover;
+            //no new data, process what's in the buffer
             processClientRequest(i, nullptr, 0);
         }
     }
@@ -286,35 +287,28 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     if (!client)
         return;
     HttpRequest& request = client->getHttpRequest();
-    // if (request.buffer.size() + message_size > client->getBufferLimit())
-    // {
-    //     HttpResponse response;
-    //     response.statusCode = static_cast<HTTP_StatusCode>(413);
-    // }
-    // request.buffer.append(temp_buffer, message_size);
-    if (temp_buffer != nullptr && message_size > 0)
+    if (request.buffer.size() + static_cast<size_t>(message_size) > _recvBufferSize)
+    {
+        HttpResponse response;
+        response.statusCode = static_cast<HTTP_StatusCode>(413);
+        response.headers["Content-Length"] = "0";
+        response.headers["Connection"] = "close";
+        std::string rawResponse = serializeHttpResponse(response);
+        client->appendToSendBuffer(rawResponse);
+        client->getHttpRequest().keepAlive = false;
+        _poll_fds[i].events &= ~POLLIN;
+        _poll_fds[i].events |= POLLOUT;
+        return;
+    }
+    if (temp_buffer != nullptr)
     {
         request.buffer.append(temp_buffer, message_size);
     }
     // std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
 
-    
-
     HttpRequestParser::parse(request);
     std::cout << "DEBUG parseResult=" << request.parseResult 
           << " parseState=" << request.parseState << "\n";
-
-    // if (request.parseResult == PARSE_ERROR)
-    // {
-    //     std::cout << "PARSE_ERROR" << "\n";
-    //     HttpResponse errResp;
-    //     errResp.statusCode = static_cast<HTTP_StatusCode>(400);
-    //     errResp.headers["Content-Length"] = "0";
-    //     errResp.headers["Connection"] = "close";
-    //     client->appendToSendBuffer(serializeHttpResponse(errResp));
-    //     _poll_fds[i].events &= ~POLLIN;
-    //     _poll_fds[i].events |= POLLOUT;
-    // }
     if (request.parseResult == PARSE_ERROR)
     {
         HttpResponse errResp;
@@ -470,13 +464,6 @@ void Manager::receiveDataFromClient(size_t& i)
     client->addBytesReceived(message_size);
     processClientRequest(i, temp_buffer, message_size);
 }
-
-
-        // ssize_t sent = send(client_fd, rawResponse.c_str(), rawResponse.size(), 0);
-        // if (sent < 0)
-        // {
-        //     std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
-        // }
 
 
 // SIGCHLD     - Child process ended

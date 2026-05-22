@@ -85,7 +85,6 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         if (request.parseState == REQ_LINE)
         {
             // std::cout << "parse -> request.buffer: " << request.buffer << "\n";
-
             ParseResult parseRes = parseRequestLine(request);
             if (parseRes == PARSE_ERROR)
             {
