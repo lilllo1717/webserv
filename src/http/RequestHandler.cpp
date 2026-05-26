@@ -4,6 +4,7 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
 {
     HttpResponse response;
     response.statusCode = code;
+	(void)config;
 
     int codeInt = static_cast<int>(code);
 
@@ -20,14 +21,14 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     //           	<< std::endl;
 	// 
 
-    auto it = config.errorPages.find(codeInt);
-    if (it != config.errorPages.end())
-    {
+    // auto it = config.errorPages.find(codeInt);
+    // if (it != config.errorPages.end())
+    // {
 		
-        HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
-		errorPage.statusCode = code;
-		return errorPage;
-    }
+    //     HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
+	// 	errorPage.statusCode = code;
+	// 	return errorPage;
+    // }
 	std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
     std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
     response.body.assign(body.begin(), body.end());

@@ -263,6 +263,27 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after return value");
 }
 
+void	Parser::parseBodySizeDirective(routeConfig& sC)
+{
+	if (sC.bodySizeSet)
+		throwError("Duplicate client_max_body_size directive");
+	
+	sC.bodySizeSet = true;
+
+	const Token&	bodySize = verifyToken(tokenType::TOKEN_WORD, "Expected number size after 'client_max_body_size' directive");
+	
+	try
+	{
+		sC.clientMaxBodySize = convertClientMaxBodySize(bodySize.value);
+	}
+	catch(const std::exception& e)
+	{
+		throwError("Invalid client_max_body_size value");
+	}
+	
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
+}
+
 void	Parser::parseInsideLocationBlock(routeConfig& rC)
 {
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected directive in location");
@@ -278,6 +299,8 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 		parseAutoindexDirective(rC);
 	else if (name == "upload_store")
 		parseUploadStoreDirective(rC);
+	else if (name == "client_max_body_size")
+		parseBodySizeDirective(rC);
 	else if (name == "cgi")
 		parseCGIDirective(rC);
 	else if (name == "return")
@@ -341,7 +364,7 @@ void	Parser::parseListenDirective(serverConfig& sC)
 
 	std::string	value = address.value;
 
-	std::string host = "0.0.0.0";
+	std::string host = "127.0.0.1";
 	int port;
 
 	size_t	colon = value.find(':');
@@ -470,6 +493,8 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 	for (size_t i = 0; i < errorCodes.size(); i++)
 		sC.errorPages[errorCodes[i]] = path.value;
 }
+
+
 
 void	Parser::parseInsideServerBlock(serverConfig& sC)
 {

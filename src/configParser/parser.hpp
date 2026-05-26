@@ -36,6 +36,9 @@ struct routeConfig
 	std::string					uploadPath; // where to store uploaded files
 	bool						uploadStoreSet = false;
 
+	size_t 						clientMaxBodySize = 0;
+	bool   						bodySizeSet = false;
+
 	std::map<std::string, std::string>	cgi;
 };
 
@@ -93,6 +96,8 @@ class Parser
 		void			parseUploadStoreDirective(routeConfig& rC);
 		void			parseCGIDirective(routeConfig& rC);
 		void			parseReturnDirective(routeConfig& rC);
+		
+		void			parseBodySizeDirective(routeConfig& sC);
 
 		void			parseInsideLocationBlock(routeConfig& rC);
 		routeConfig		parseLocationBlock();
