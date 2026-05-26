@@ -118,9 +118,7 @@ ParseResult HttpRequestParser::validateUri(std::string &uri)
         return PARSE_ERROR;
     }
     normalized_str = normalizeString(decoded_string);
-    uri = normalized_str;
-    std::cout << "DEBUG: validateUri decoded uri: [" << uri << "]\n";
-    
+    uri = normalized_str;   
     return PARSE_DONE;
 }
 

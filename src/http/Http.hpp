@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <charconv>
 #include <stack>
+#include <filesystem>
 // #include "../manager/Manager.hpp"
 #include "webserv.hpp"
 
