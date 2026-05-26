@@ -18,7 +18,7 @@ class Client
     private:
         int         _socketFd;
         size_t      _bytesSent;
-        ssize_t      _bytesReceived;
+        size_t      _bytesReceived;
         // std::string _receiveBuffer;
         ssize_t      _bufferLimit;
         std::string _sendBuffer;
@@ -41,10 +41,11 @@ class Client
 
         void addBytesSent(size_t bytes);
         void addBytesReceived(ssize_t bytes);
+        void resetBytesReceived();
         size_t getBytesSent() const;
         
         // void addBytesReceived(size_t bytes);
-        ssize_t getBytesReceived() const;
+        size_t getBytesReceived() const;
 
         // void appendToReceiveBuffer(const std::string& data);
         // const std::string& getReceiveBuffer() const;

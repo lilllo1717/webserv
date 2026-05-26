@@ -79,6 +79,7 @@ class Manager
         void responseToClient(size_t& i);
 
         void closeListenSockets(std::vector<Listener>& listeners);
+        void cleanupClient(int client_fd, size_t& i);
 
         void writeCgiBody(size_t& i, Client* client);
         void readCgiOutput(size_t& i, Client* client);
