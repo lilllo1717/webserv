@@ -39,8 +39,7 @@ std::vector<std::unique_ptr<Server>>& Manager::getServers()
 
 void Manager::addClient(int socketFd)
 {
-    _clients[socketFd] = std::make_unique<Client>(socketFd);
-    // _clientFdToServer[socketFd] = server;
+        _clients[socketFd] = std::make_unique<Client>(socketFd);
 }
 
 void Manager::removeClient(int socketFd)
@@ -177,26 +176,51 @@ void Manager::acceptNewConnection(int listenerFd, size_t listenerIndex)
         struct sockaddr_in client_address;
         client_len = sizeof(client_address);
         int new_socket_fd = accept(listenerFd, (struct sockaddr*)&client_address, &client_len);
-        
+        // std::cout << "DEBUG accept new connection: fd=" << new_socket_fd << "\n";
         if (new_socket_fd < 0)
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            int saved_errno = errno;
+            if (saved_errno == EAGAIN || saved_errno == EWOULDBLOCK)
                 break;
-            // _started = false;
+            std::cerr << "accept failed: " << strerror(saved_errno) << "\n";
             break;
         }
         int flags = fcntl(new_socket_fd, F_GETFL, 0);
+        if (flags < 0)
+        {
+            std::cerr << "fcntl F_GETFL failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
         flags = flags | O_NONBLOCK;
-        fcntl(new_socket_fd, F_SETFL, flags);
+        if (fcntl(new_socket_fd, F_SETFL, flags) < 0)
+        {
+            std::cerr << "fcntl F_SETFL failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
 
         int fdflags = fcntl(new_socket_fd, F_GETFD, 0);
+        if (fdflags < 0)
+        {
+            std::cerr << "fcntl F_GETFD failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
         fdflags = fdflags | FD_CLOEXEC;
-        fcntl(new_socket_fd, F_SETFD, fdflags);
-        
-        _clientFdToRemoteAddress[new_socket_fd] = inet_ntoa(client_address.sin_addr);
-        _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
+        if (fcntl(new_socket_fd, F_SETFD, fdflags) < 0)
+        {
+            std::cerr << "fcntl F_SETFD failed: " << strerror(errno) << "\n";
+            close(new_socket_fd);
+            return;
+        }
         addClient(new_socket_fd);
+        _clientFdToRemoteAddress[new_socket_fd] = inet_ntoa(client_address.sin_addr);
+        std::cout << "DEBUG: New connection from " << _clientFdToRemoteAddress[new_socket_fd] 
+                  << " on fd " << new_socket_fd << "\n";
         _clientFdToListenerIndex[new_socket_fd] = listenerIndex;
+        std::cout << "DEBUG: Assigned listener index " << listenerIndex << " to client fd " << new_socket_fd << "\n";
+        _poll_fds.push_back(pollfd{new_socket_fd, POLLIN, 0});
     }
 }
 
@@ -210,11 +234,7 @@ void Manager::responseToClient(size_t& i)
     const std::string& sendBuffer = client->getSendBuffer();
     if (sendBuffer.empty())
     {
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        // _poll_fds[i].events &= ~POLLOUT;
-        --i;
+        cleanupClient(client_fd, i);
         return ;
     }
     ssize_t bytes_sent = send(client_fd, sendBuffer.c_str(), sendBuffer.size(), 0);
@@ -225,10 +245,7 @@ void Manager::responseToClient(size_t& i)
             return ;
         }
         std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return ;
     }
 
@@ -251,18 +268,12 @@ void Manager::responseToClient(size_t& i)
         if (!leftover.empty())
         {
             client->getHttpRequest().buffer = leftover;
+            //no new data, process what's in the buffer
             processClientRequest(i, nullptr, 0);
         }
     }
-
     else
-    {
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
-    }
-    
+        cleanupClient(client_fd, i); 
 }
 
 // void Manager::processClientRequest(size_t& i, std::string temp_buffer, ssize_t message_size)
@@ -275,36 +286,29 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     if (!client)
         return;
     HttpRequest& request = client->getHttpRequest();
-    // if (request.buffer.size() + message_size > client->getBufferLimit())
-    // {
-    //     HttpResponse response;
-    //     response.statusCode = static_cast<HTTP_StatusCode>(413);
-    // }
-    // request.buffer.append(temp_buffer, message_size);
-    if (temp_buffer != nullptr && message_size > 0)
+    if (request.buffer.size() + static_cast<size_t>(message_size) > _recvBufferSize)
+    {
+        HttpResponse response;
+        response.statusCode = static_cast<HTTP_StatusCode>(413);
+        response.headers["Content-Length"] = "0";
+        response.headers["Connection"] = "close";
+        std::string rawResponse = serializeHttpResponse(response);
+        client->appendToSendBuffer(rawResponse);
+        client->getHttpRequest().keepAlive = false;
+        _poll_fds[i].events &= ~POLLIN;
+        _poll_fds[i].events |= POLLOUT;
+        return;
+    }
+    if (temp_buffer != nullptr)
     {
         request.buffer.append(temp_buffer, message_size);
     }
     // std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
 
-    
-
-    HttpRequestParser::parse(request);
+    ParseResult parseRes = HttpRequestParser::parse(request);
     std::cout << "DEBUG parseResult=" << request.parseResult 
           << " parseState=" << request.parseState << "\n";
-
-    // if (request.parseResult == PARSE_ERROR)
-    // {
-    //     std::cout << "PARSE_ERROR" << "\n";
-    //     HttpResponse errResp;
-    //     errResp.statusCode = static_cast<HTTP_StatusCode>(400);
-    //     errResp.headers["Content-Length"] = "0";
-    //     errResp.headers["Connection"] = "close";
-    //     client->appendToSendBuffer(serializeHttpResponse(errResp));
-    //     _poll_fds[i].events &= ~POLLIN;
-    //     _poll_fds[i].events |= POLLOUT;
-    // }
-    if (request.parseResult == PARSE_ERROR)
+    if (parseRes == PARSE_ERROR)
     {
         HttpResponse errResp;
         if (request.method == HTTP_UNKNOWN)
@@ -313,7 +317,7 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         }
         else
         {
-            errResp.statusCode = (request.parseState == ERROR)
+            errResp.statusCode = request.uri_too_long
                 ? static_cast<HTTP_StatusCode>(414)
                 : static_cast<HTTP_StatusCode>(400);
         }
@@ -322,10 +326,11 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         client->appendToSendBuffer(serializeHttpResponse(errResp));
         _poll_fds[i].events = POLLOUT;
     }
-    else if (request.parseResult == PARSE_DONE)
+    else if (parseRes == PARSE_DONE)
     {
         // std::cout << "!!!!!!!!!!!Content type: " << request.contentType << "\n";
         // std::cout << "PARSE_DONE" << "\n";
+        client->resetBytesReceived();
         size_t listen_index = _clientFdToListenerIndex[client_fd];
         Listener& listener = _listeners[listen_index];
         RouterResult result = _router.handleRequest(request, listener, _clientFdToRemoteAddress[client_fd]);
@@ -404,15 +409,22 @@ void Manager::closeListenSockets(std::vector<Listener>& listeners)
     }
 }
 
+void Manager::cleanupClient(int client_fd, size_t& i)
+{
+
+    close(client_fd);
+    removeClient(client_fd);
+    _poll_fds.erase(_poll_fds.begin() + i);
+    --i;
+}
+
 void Manager::receiveDataFromClient(size_t& i)
 {
     int client_fd = _poll_fds[i].fd;
     Client* client = getClient(client_fd);
     if (!client)
     {
-        close(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return;
     }
     
@@ -421,10 +433,7 @@ void Manager::receiveDataFromClient(size_t& i)
     if (message_size == 0)
     {
         // Client disconnected
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return;
     }
     else if (message_size < 0)
@@ -435,13 +444,10 @@ void Manager::receiveDataFromClient(size_t& i)
             return;
         }
         std::cerr << "recv error on fd " << client_fd << ": " << strerror(errno) << "\n";
-        close(client_fd);
-        removeClient(client_fd);
-        _poll_fds.erase(_poll_fds.begin() + i);
-        --i;
+        cleanupClient(client_fd, i);
         return;
     }
-    else if (static_cast<size_t>(client->getBytesReceived()) + static_cast<size_t>(message_size) > _recvBufferSize)
+    else if (client->getBytesReceived() + static_cast<size_t>(message_size) > _recvBufferSize)
     {
         HttpResponse response;
         response.statusCode = static_cast<HTTP_StatusCode>(413);
@@ -449,21 +455,14 @@ void Manager::receiveDataFromClient(size_t& i)
         response.headers["Connection"] = "close";
         std::string rawResponse = serializeHttpResponse(response);
         client->appendToSendBuffer(rawResponse);
+        client->getHttpRequest().keepAlive = false;
         _poll_fds[i].events &= ~POLLIN;
         _poll_fds[i].events |= POLLOUT;
         return;
     }
     client->addBytesReceived(message_size);
     processClientRequest(i, temp_buffer, message_size);
-
 }
-
-
-        // ssize_t sent = send(client_fd, rawResponse.c_str(), rawResponse.size(), 0);
-        // if (sent < 0)
-        // {
-        //     std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
-        // }
 
 
 // SIGCHLD     - Child process ended
@@ -482,7 +481,7 @@ int Manager::run()
         {
             if (errno == EINTR)
                 continue;
-            std::cerr << "poll failed.\n";
+            std::cerr << "poll failed: " << strerror(errno) << "\n";
             closeListenSockets(_listeners);
             return -1;
         }
@@ -523,10 +522,7 @@ int Manager::run()
             {
                 if (_poll_fds[i].revents & (POLLHUP | POLLERR))
                 {
-                    close(fd);
-                    removeClient(fd);
-                    _poll_fds.erase(_poll_fds.begin() + i);
-                    --i;
+                    cleanupClient(_poll_fds[i].fd, i);
                     continue;
                 }
                 if (_poll_fds[i].revents & POLLIN)

@@ -125,10 +125,16 @@ size_t Client::getBytesSent() const
 
 void Client::addBytesReceived(ssize_t bytes)
 {
-    _bytesReceived += bytes;
+    if (bytes > 0)
+    _bytesReceived += static_cast<size_t>(bytes);
 }
 
-ssize_t Client::getBytesReceived() const
+void Client::resetBytesReceived()
+{
+    _bytesReceived = 0;
+}
+
+size_t Client::getBytesReceived() const
 {
     return _bytesReceived;
 }
