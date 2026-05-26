@@ -68,11 +68,10 @@ ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
             return PARSE_DONE;
         }
         std::string string_to_check = request.buffer.substr(0, pos);
-        std::cout << "string_to_check: " << string_to_check << "\n";
-        
+        // std::cout << "string_to_check: " << string_to_check << "\n";
         if (parseSingleHeader(string_to_check, request) == PARSE_ERROR)
             return PARSE_ERROR;
-        // std::cout << "buffer: [" << request.buffer << "]\n";
+        std::cout << "buffer: [" << request.buffer << "]\n";
         request.buffer.erase(0, pos + 2);
     }
     return PARSE_DONE;

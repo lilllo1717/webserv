@@ -18,6 +18,7 @@
 #include <cctype>
 #include <algorithm>
 #include <charconv>
+#include <stack>
 // #include "../manager/Manager.hpp"
 #include "webserv.hpp"
 
@@ -153,6 +154,7 @@ struct HttpRequest
     std::string unparsed_uri;               // "/path%2F..../?a=1"
     std::string uri_path;                   // parsed path
     std::string uri_query;                  // part after '?'
+    bool uri_too_long = false;
 
     /*    --------   Headers  ---------   */
     std::string host;                           // "www.example.com"

@@ -306,10 +306,10 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     }
     // std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
 
-    HttpRequestParser::parse(request);
+    ParseResult parseRes = HttpRequestParser::parse(request);
     std::cout << "DEBUG parseResult=" << request.parseResult 
           << " parseState=" << request.parseState << "\n";
-    if (request.parseResult == PARSE_ERROR)
+    if (parseRes == PARSE_ERROR)
     {
         HttpResponse errResp;
         if (request.method == HTTP_UNKNOWN)
@@ -318,7 +318,7 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         }
         else
         {
-            errResp.statusCode = (request.parseState == ERROR)
+            errResp.statusCode = request.uri_too_long
                 ? static_cast<HTTP_StatusCode>(414)
                 : static_cast<HTTP_StatusCode>(400);
         }
@@ -327,7 +327,7 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         client->appendToSendBuffer(serializeHttpResponse(errResp));
         _poll_fds[i].events = POLLOUT;
     }
-    else if (request.parseResult == PARSE_DONE)
+    else if (parseRes == PARSE_DONE)
     {
         // std::cout << "!!!!!!!!!!!Content type: " << request.contentType << "\n";
         // std::cout << "PARSE_DONE" << "\n";
