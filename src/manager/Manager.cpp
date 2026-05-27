@@ -289,11 +289,11 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     HttpRequest& request = client->getHttpRequest();
     if (request.buffer.size() + static_cast<size_t>(message_size) > _recvBufferSize)
     {
-        HttpResponse response;
-        response.statusCode = static_cast<HTTP_StatusCode>(413);
-        response.headers["Content-Length"] = "0";
-        response.headers["Connection"] = "close";
-        std::string rawResponse = serializeHttpResponse(response);
+        HttpResponse errResp;
+        errResp.statusCode = static_cast<HTTP_StatusCode>(413);
+        errResp.headers["Content-Length"] = "0";
+        errResp.headers["Connection"] = "close";
+        std::string rawResponse = serializeHttpResponse(errResp);
         client->appendToSendBuffer(rawResponse);
         client->getHttpRequest().keepAlive = false;
         _poll_fds[i].events &= ~POLLIN;
@@ -324,8 +324,11 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         }
         errResp.headers["Content-Length"] = "0";
         errResp.headers["Connection"] = "close";
-        client->appendToSendBuffer(serializeHttpResponse(errResp));
-        _poll_fds[i].events = POLLOUT;
+        std::string rawResponse = serializeHttpResponse(errResp);
+        client->appendToSendBuffer(rawResponse);
+        client->getHttpRequest().keepAlive = false;
+        _poll_fds[i].events &= ~POLLIN;
+        _poll_fds[i].events |= POLLOUT;
     }
     else if (parseRes == PARSE_DONE)
     {
