@@ -37,6 +37,7 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
     return response;
 }
 
+
 // Converts URI (filesystem path)
 std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeConfig& route)
 {
@@ -44,12 +45,26 @@ std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeC
 
     // Remove location prefix
     if (relative.find(route.path) == 0)
-        relative = relative.substr(route.path.length());
+		relative = relative.substr(route.path.length());
+	
+	// Remove leading /
+	if (!relative.empty() && relative[0] == '/')
+		relative.erase(0, 1);
+		
+	std::filesystem::path root = std::filesystem::weakly_canonical(route.rootDir);
+	std::filesystem::path requested = std::filesystem::weakly_canonical(root / relative);
 
-    if (relative.empty() || relative== "/")
-        return route.rootDir;
+	std::string rootStr = root.string();
+	std::string requestedStr = requested.string();
 
-    return route.rootDir + "/" + relative;
+	// Checks does not go beyond root
+	if (requestedStr.find(rootStr) != 0)
+	{
+		std::cout << "Directory traversale attempt blocked\n";
+		return "";
+	}
+
+	return requestedStr;
 }
 
 // Check if path is a directory
@@ -176,6 +191,12 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 	HttpResponse response;
 	std::string path = resolvePath(request, route);
 
+	if (path.empty())
+	{
+    	response.statusCode = static_cast<HTTP_StatusCode>(403);
+    	return buildErrorResponse(response.statusCode, config);
+	}
+
 	if (isDirectory(path))
 	{
 		std::string indexPath = resolveIndexFile(path, route);
@@ -253,6 +274,12 @@ HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const rout
 {
 	HttpResponse	response;
 	std::string		path = resolvePath(request, route);
+
+	if (path.empty())
+	{
+    	response.statusCode = static_cast<HTTP_StatusCode>(403);
+    	return buildErrorResponse(response.statusCode, config);
+	}
 
 	struct stat	s;
 	if (stat(path.c_str(), &s) != 0)
