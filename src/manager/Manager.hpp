@@ -84,6 +84,7 @@ class Manager
         void writeCgiBody(size_t& i, Client* client);
         void readCgiOutput(size_t& i, Client* client);
         void finalizeCgiOutput(int client_fd, Client* client);
+        Server* findServerForRequests(const Listener& listener, const HttpRequest& request);
 };
 
 

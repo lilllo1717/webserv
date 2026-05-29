@@ -65,7 +65,6 @@ int main(int argc, char **argv)
             std::cout << "Added server with host " << parsedConfig.servers[i].endpoint.ip << "\n";
             std::cout << "Added server with " << parsedConfig.servers[i].serverNames[0] << " server names\n";
         }
-
         manager.buildListenersFromServers();
         if (manager.startListenersServers() == -1)
             return 1;

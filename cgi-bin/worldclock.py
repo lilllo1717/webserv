@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import sys
 import os
 import datetime
@@ -17,13 +16,12 @@ CITIES = [
 ]
 
 def get_offset(tz_name):
-    """Return UTC offset string like +02:00 using only stdlib."""
     try:
         import zoneinfo
         tz = zoneinfo.ZoneInfo(tz_name)
     except Exception:
         try:
-            import importlib, time
+            import time
             os.environ["TZ"] = tz_name
             time.tzset()
             offset_sec = -time.timezone if not time.daylight else -time.altzone
@@ -41,7 +39,6 @@ def get_offset(tz_name):
 
 
 def time_bar(hour):
-    """Simple ascii bar showing time of day."""
     filled = int((hour / 24) * 20)
     bar = "█" * filled + "░" * (20 - filled)
     if 6 <= hour < 9:
@@ -96,14 +93,24 @@ html = """<!DOCTYPE html>
     max-width: 1100px;
     margin: 0 auto;
   }
+  a.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
   .card {
     background: #1a1a2e;
     border: 1px solid #2a2a4a;
     border-radius: 12px;
     padding: 20px;
-    transition: transform .15s;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+    cursor: pointer;
   }
-  .card:hover { transform: translateY(-3px); border-color: #4a4aaa; }
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: #4a4aaa;
+    box-shadow: 0 4px 20px rgba(100, 100, 255, 0.15);
+  }
   .card-header {
     display: flex;
     align-items: center;
@@ -139,6 +146,12 @@ html = """<!DOCTYPE html>
     color: #7070cc;
     margin-top: 8px;
   }
+  .click-hint {
+    font-size: 0.7rem;
+    color: #444;
+    margin-top: 10px;
+    text-align: right;
+  }
   footer {
     text-align: center;
     margin-top: 40px;
@@ -149,7 +162,7 @@ html = """<!DOCTYPE html>
 </head>
 <body>
 <h1>🌍 World Clock</h1>
-<p class="subtitle">Auto-refreshes every 60 seconds &nbsp;·&nbsp; Served by webserv CGI</p>
+<p class="subtitle">Auto-refreshes every 60 seconds &nbsp;·&nbsp; Click a city for details &nbsp;·&nbsp; Served by webserv CGI</p>
 <div class="grid">
 """
 
@@ -159,7 +172,11 @@ for city, tz_name, flag in CITIES:
     date_str = now.strftime("%A, %d %B %Y")
     bar, period = time_bar(now.hour)
 
+    # URL-encode the city name (handle spaces and special chars)
+    city_encoded = city.replace(" ", "+").replace("ã", "a").replace("ã", "a")
+
     html += f"""
+  <a class="card-link" href="/cgi-bin/cityinfo.py?city={city_encoded}&tz={tz_name}&flag={flag}&utc={utc_label}">
   <div class="card">
     <div class="card-header">
       <span class="flag">{flag}</span>
@@ -175,7 +192,9 @@ for city, tz_name, flag in CITIES:
       <div class="period">{period}</div>
     </div>
     <div><span class="utc-badge">{utc_label}</span></div>
+    <div class="click-hint">click for details →</div>
   </div>
+  </a>
 """
 
 html += """

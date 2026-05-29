@@ -127,7 +127,7 @@ Server* findServerForRequest(const Listener& listener, const HttpRequest& reques
 
 void printRouteInfo(const routeConfig& route)
 {
-    std::cout << "\nRoute path: " << route.path << "\n";
+    std::cout << "\nDEBUG: Route path: " << route.path << "\n";
     std::cout << "HTTP Methods: ";
     for (const std::string& method : route.httpMethods)
     {
@@ -160,7 +160,7 @@ void printRouteInfo(const routeConfig& route)
 
 RouterResult Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
 {
-    (void)listener;
+    // (void)listener;
     RouterResult routerResult;
     RequestMatchResult matchResult;
     HttpResponse response;
@@ -182,19 +182,14 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
     serverConfig selectedServerConfig = selectedServer->getConfig();
 
     size_t max_uri_len = 0;
-    // std::cout << "route.path" <<  selectedServer->getConfig().routes << "\n";
-
     for (const routeConfig& route : selectedServer->getConfig().routes)
     {
-        printRouteInfo(route);
         if (matchRouteWithConfig(request.uri_path, route.path))
         {
-            // std::cout << "entered true matchRouteWithConfig" << "\n";
             if (route.path.size() > max_uri_len)
             {
                 max_uri_len = route.path.size();
                 bestMatchRouteConfig = &route;
-                std::cout << "interm uri: " << bestMatchRouteConfig->path << "\n";
             }
         }   
     }
@@ -204,12 +199,10 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
         routerResult.decision = DES_ERROR;
         routerResult.response.statusCode = static_cast<HTTP_StatusCode>(404);
         return routerResult;
-        
     }
-    std::cout << "bestMatchRouteConfig uri: " << bestMatchRouteConfig->path << "\n";
+    printRouteInfo(*bestMatchRouteConfig);
     std::string methodStringed = methodToString(request.method);
     std::cout << "methodStringed: " << methodStringed << "\n";
-
     if (bestMatchRouteConfig->isRedirect == true)
     {
         routerResult.decision = DES_REDIRECT;
@@ -219,12 +212,12 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
     }
     if (std::find(bestMatchRouteConfig->httpMethods.begin(), bestMatchRouteConfig->httpMethods.end(), methodStringed)
          == bestMatchRouteConfig->httpMethods.end())
-         {
-            // std::cout << "no method match." << "\n";
-            routerResult.decision = DES_ERROR;
-            routerResult.response.statusCode = static_cast<HTTP_StatusCode>(405);
-            return routerResult;
-         }
+    {
+    // std::cout << "no method match." << "\n";
+    routerResult.decision = DES_ERROR;
+    routerResult.response.statusCode = static_cast<HTTP_StatusCode>(405);
+    return routerResult;
+    }
     matchResult.selectedServer = selectedServer;
     matchResult.bestMatchRouteConfig = bestMatchRouteConfig;
     matchResult.stringifiedMethod = methodStringed;
@@ -246,18 +239,18 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
     {
         std::string filePath = bestMatchRouteConfig->rootDir
                             + request.uri_path.substr(bestMatchRouteConfig->path.size());
-        std::cout << "DEBUG stat check: [" << filePath << "]\n";  // ← add this
+        std::cout << "DEBUG stat check: [" << filePath << "]\n";
         struct stat st;
         if (stat(filePath.c_str(), &st) == 0 && !S_ISDIR(st.st_mode) && (st.st_mode & S_IXUSR))
         {
-            std::cout << "DEBUG file is executable → DES_CGI\n";  // ← add this
+            std::cout << "DEBUG file is executable → DES_CGI\n";
             matchResult.interpreter = "";
             routerResult.decision = DES_CGI;
             routerResult.matchResult = matchResult;
             routerResult.routeConfigure = bestMatchRouteConfig;
             return routerResult;
         }
-        std::cout << "DEBUG stat failed or not executable\n";  // ← add this
+        std::cout << "DEBUG stat failed or not executable\n";
     }
     routerResult.decision = DES_NORMAL;
     routerResult.matchResult = matchResult;
