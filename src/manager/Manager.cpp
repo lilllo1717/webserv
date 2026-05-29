@@ -304,11 +304,11 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     {
         request.buffer.append(temp_buffer, message_size);
     }
-    // std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
-
     ParseResult parseRes = HttpRequestParser::parse(request);
-    std::cout << "DEBUG parseResult=" << request.parseResult 
-          << " parseState=" << request.parseState << "\n";
+    if (parseRes == PARSE_IN_PROGRESS)
+    {
+        return;
+    }
     if (parseRes == PARSE_ERROR)
     {
         HttpResponse errResp;
@@ -338,14 +338,13 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         size_t listen_index = _clientFdToListenerIndex[client_fd];
         Listener& listener = _listeners[listen_index];
         RouterResult result = _router.handleRequest(request, listener, _clientFdToRemoteAddress[client_fd]);
-        //generate response;
-
         if (result.decision == DES_ERROR)
         {
             HttpResponse errResp = RequestHandler::buildErrorResponse(result.response.statusCode, result.matchResult.selectedServerCon);
             result.response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(errResp));
-            _poll_fds[i].events = POLLOUT;
+            _poll_fds[i].events &= ~POLLIN;
+            _poll_fds[i].events |= POLLOUT;
         }
         else if (result.decision == DES_NORMAL)
         {
@@ -354,13 +353,15 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
               << " Content-Length=" << response.headers["Content-Length"] << "\n";
             response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(response));
-            _poll_fds[i].events = POLLOUT;
+            _poll_fds[i].events &= ~POLLIN;
+            _poll_fds[i].events |= POLLOUT;
         }
         else if (result.decision == DES_REDIRECT)
         {
             result.response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(result.response));
-            _poll_fds[i].events = POLLOUT;
+            _poll_fds[i].events &= ~POLLIN;
+            _poll_fds[i].events |= POLLOUT;
         }
         else if (result.decision == DES_CGI)
         {
@@ -371,7 +372,8 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
                 HttpResponse response;
                 response.statusCode = static_cast<HTTP_StatusCode>(500);
                 client->appendToSendBuffer(serializeHttpResponse(response));
-                _poll_fds[i].events = POLLOUT;
+                _poll_fds[i].events &= ~POLLIN;
+                _poll_fds[i].events |= POLLOUT;
                 return;
             }
             client->initializeCgiState(state);

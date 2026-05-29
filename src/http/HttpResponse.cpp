@@ -106,7 +106,57 @@ std::string extractExtensionFromUri(HttpRequest request)
      std::cout << "request.uri_path.substr(lastDot) [" << request.uri_path.substr(lastDot) << "]\n";
     return request.uri_path.substr(lastDot);
 
-} 
+}
+
+Server* findServerForRequest(const Listener& listener, const HttpRequest& request)
+{
+    std::string hostName = getHostName(request.host);
+    for (const Server* server : listener.servers)
+    {
+        const std::vector<std::string>& names = server->getServerNames();
+        for (const std::string& name : names)
+        {
+            if (name == hostName)
+            {
+                return const_cast<Server*>(server);
+            }
+        }
+    }
+    return listener.defaultServer;
+}
+
+void printRouteInfo(const routeConfig& route)
+{
+    std::cout << "\nRoute path: " << route.path << "\n";
+    std::cout << "HTTP Methods: ";
+    for (const std::string& method : route.httpMethods)
+    {
+        std::cout << method << " ";
+    }
+    std::cout << "\n";
+    std::cout << "Root Directory: " << route.rootDir << "\n";
+    std::cout << "Index File: " << route.index << "\n";
+    std::cout << "Autoindex: " << (route.autoindex ? "Enabled" : "Disabled") << "\n";
+    if (route.isRedirect)
+    {
+        std::cout << "Redirect Code: " << route.redirectCode << "\n";
+        std::cout << "Redirect Target: " << route.redirectTarget << "\n";
+    }
+    std::cout << "Allow Upload: " << (route.allow_upload ? "Yes" : "No") << "\n";
+    if (route.allow_upload)
+    {
+        std::cout << "Upload Path: " << route.uploadPath << "\n";
+    }
+    if (!route.cgi.empty())
+    {
+        std::cout << "CGI Configurations:\n";
+        for (const auto& cgiPair : route.cgi)
+        {
+            std::cout << "  Extension: " << cgiPair.first
+                      << ", Interpreter: " << cgiPair.second << "\n";
+        }
+    }
+}
 
 RouterResult Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
 {
@@ -122,21 +172,7 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
         return routerResult;
     }
     const Server* selectedServer = listener.defaultServer;
-    std::string hostName = getHostName(request.host);
-    std::cout << "hostName: [" << hostName << "]\n";
-    for (const Server* server : listener.servers)
-    {
-        const std::vector<std::string>& names = server->getServerNames();
-        for (const std::string& name : names)
-        {
-            if (name == hostName)
-            {
-                selectedServer = server;
-                std::cout << "targeted server found: " << name << "\n";
-                break;
-            }
-        }
-    }
+    selectedServer = findServerForRequest(listener, request);
     if (selectedServer)
     {
         std::cout << "Routing to server with port "
@@ -150,11 +186,10 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
 
     for (const routeConfig& route : selectedServer->getConfig().routes)
     {
-        std::cout << "route.path [" <<  route.path << "]\n";
+        printRouteInfo(route);
         if (matchRouteWithConfig(request.uri_path, route.path))
         {
-            std::cout << "entered true matchRouteWithConfig" << "\n";
-
+            // std::cout << "entered true matchRouteWithConfig" << "\n";
             if (route.path.size() > max_uri_len)
             {
                 max_uri_len = route.path.size();

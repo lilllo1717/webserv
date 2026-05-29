@@ -192,14 +192,12 @@ ParseResult HttpRequestParser::parseBody(HttpRequest& request)
     else if (request.bodyType == CHUNKED)
     {
         std::cout << "ParseBody chunked." << "\n";
-
         ParseResult res = parseChunkedBody(request);
         if (res == PARSE_DONE)
         {
             request.parseState = DONE;
             return PARSE_DONE;
         }
-        
         if (res == PARSE_ERROR)
         {
             std::cout << "ParseBody chunked error" << "\n";

@@ -91,10 +91,10 @@ std::string normalizeString(std::string &uri)
         else
             stack_str.push(segment);
     }
-    for (size_t i = 0; i < stack_str.size(); i++)
+    while (!stack_str.empty())
     {
-            normalized_str = "/" + stack_str.top() + normalized_str;
-            stack_str.pop();        
+        normalized_str = "/" + stack_str.top() + normalized_str;
+        stack_str.pop();        
     }
     if (normalized_str.empty())
         normalized_str = "/";
