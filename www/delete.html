@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete File</title>
+</head>
+<body>
+
+<h1>Delete File</h1>
+
+<input type="text"
+       id="filename"
+       placeholder="example.txt">
+
+<button onclick="deleteFile()">
+    Delete
+</button>
+
+<script>
+
+function deleteFile()
+{
+    const file = document.getElementById("filename").value;
+
+    fetch("/uploads/" + file,
+    {
+        method: "DELETE"
+    })
+    .then(response =>
+    {
+        alert("Status: " + response.status);
+    });
+}
+
+</script>
+
+</body>
+</html>
