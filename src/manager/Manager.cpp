@@ -74,6 +74,28 @@ void Manager::buildListenersFromServers()
     _listeners = buildListeners(_servers);
 }
 
+std::string getHostNameS(std::string server_host)
+{
+    auto pos = server_host.find(':');
+    if (pos == std::string::npos)
+        return server_host;
+    return server_host.substr(0, pos);
+}
+
+Server* Manager::findServerForRequests(const Listener& listener, const HttpRequest& request)
+{
+    std::string hostName = getHostNameS(request.host);
+    for (const Server* server : listener.servers)
+    {
+        const std::vector<std::string>& names = server->getServerNames();
+        for (const std::string& name : names)
+        {
+            if (name == hostName)
+                return const_cast<Server*>(server);
+        }
+    }
+    return listener.defaultServer;
+}
 
 void Manager::finalizeCgiOutput(int client_fd, Client* client)
 {
@@ -286,28 +308,15 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     if (!client)
         return;
     HttpRequest& request = client->getHttpRequest();
-    if (request.buffer.size() + static_cast<size_t>(message_size) > _recvBufferSize)
-    {
-        HttpResponse response;
-        response.statusCode = static_cast<HTTP_StatusCode>(413);
-        response.headers["Content-Length"] = "0";
-        response.headers["Connection"] = "close";
-        std::string rawResponse = serializeHttpResponse(response);
-        client->appendToSendBuffer(rawResponse);
-        client->getHttpRequest().keepAlive = false;
-        _poll_fds[i].events &= ~POLLIN;
-        _poll_fds[i].events |= POLLOUT;
-        return;
-    }
     if (temp_buffer != nullptr)
     {
         request.buffer.append(temp_buffer, message_size);
     }
-    // std::cout << "processClientRequest -> request.buffer: " << request.buffer << "\n";
-
     ParseResult parseRes = HttpRequestParser::parse(request);
-    std::cout << "DEBUG parseResult=" << request.parseResult 
-          << " parseState=" << request.parseState << "\n";
+    if (parseRes == PARSE_IN_PROGRESS)
+    {
+        return;
+    }
     if (parseRes == PARSE_ERROR)
     {
         HttpResponse errResp;
@@ -323,8 +332,11 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         }
         errResp.headers["Content-Length"] = "0";
         errResp.headers["Connection"] = "close";
-        client->appendToSendBuffer(serializeHttpResponse(errResp));
-        _poll_fds[i].events = POLLOUT;
+        std::string rawResponse = serializeHttpResponse(errResp);
+        client->appendToSendBuffer(rawResponse);
+        client->getHttpRequest().keepAlive = false;
+        _poll_fds[i].events &= ~POLLIN;
+        _poll_fds[i].events |= POLLOUT;
     }
     else if (parseRes == PARSE_DONE)
     {
@@ -333,30 +345,46 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         client->resetBytesReceived();
         size_t listen_index = _clientFdToListenerIndex[client_fd];
         Listener& listener = _listeners[listen_index];
+        if (request.contentLength > 0)
+        {
+            Server* server = findServerForRequests(listener, request);
+            size_t maxBodySize = server->getConfig().clientMaxBodySize;
+            if (maxBodySize > 0 && request.contentLength > maxBodySize)
+            {
+                HttpResponse response;
+                response.statusCode = static_cast<HTTP_StatusCode>(413);
+                response.headers["Content-Length"] = "0";
+                response.headers["Connection"] = "close";
+                client->appendToSendBuffer(serializeHttpResponse(response));
+                client->getHttpRequest().keepAlive = false;
+                _poll_fds[i].events &= ~POLLIN;
+                _poll_fds[i].events |= POLLOUT;
+                return;
+            }
+        }
         RouterResult result = _router.handleRequest(request, listener, _clientFdToRemoteAddress[client_fd]);
-        //generate response;
-
         if (result.decision == DES_ERROR)
         {
             HttpResponse errResp = RequestHandler::buildErrorResponse(result.response.statusCode, result.matchResult.selectedServerCon);
             result.response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(errResp));
-            _poll_fds[i].events = POLLOUT;
+            _poll_fds[i].events &= ~POLLIN;
+            _poll_fds[i].events |= POLLOUT;
         }
         else if (result.decision == DES_NORMAL)
         {
             HttpResponse response = RequestHandler::executeNormal(request, *result.routeConfigure, result.matchResult.selectedServerCon);
-            std::cout << "DEBUG DES_NORMAL body.size=" << response.body.size() 
-              << " Content-Length=" << response.headers["Content-Length"] << "\n";
             response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(response));
-            _poll_fds[i].events = POLLOUT;
+            _poll_fds[i].events &= ~POLLIN;
+            _poll_fds[i].events |= POLLOUT;
         }
         else if (result.decision == DES_REDIRECT)
         {
             result.response.closeConnection = !request.keepAlive;
             client->appendToSendBuffer(serializeHttpResponse(result.response));
-            _poll_fds[i].events = POLLOUT;
+            _poll_fds[i].events &= ~POLLIN;
+            _poll_fds[i].events |= POLLOUT;
         }
         else if (result.decision == DES_CGI)
         {
@@ -367,7 +395,8 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
                 HttpResponse response;
                 response.statusCode = static_cast<HTTP_StatusCode>(500);
                 client->appendToSendBuffer(serializeHttpResponse(response));
-                _poll_fds[i].events = POLLOUT;
+                _poll_fds[i].events &= ~POLLIN;
+                _poll_fds[i].events |= POLLOUT;
                 return;
             }
             client->initializeCgiState(state);
@@ -427,7 +456,7 @@ void Manager::receiveDataFromClient(size_t& i)
         cleanupClient(client_fd, i);
         return;
     }
-    
+    // Server* server = getServerByClientFd(client_fd);
     char temp_buffer[4096];
     ssize_t message_size = recv(client_fd, temp_buffer, sizeof(temp_buffer), 0);
     if (message_size == 0)

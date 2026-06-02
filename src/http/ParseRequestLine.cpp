@@ -91,10 +91,10 @@ std::string normalizeString(std::string &uri)
         else
             stack_str.push(segment);
     }
-    for (size_t i = 0; i < stack_str.size(); i++)
+    while (!stack_str.empty())
     {
-            normalized_str = "/" + stack_str.top() + normalized_str;
-            stack_str.pop();        
+        normalized_str = "/" + stack_str.top() + normalized_str;
+        stack_str.pop();        
     }
     if (normalized_str.empty())
         normalized_str = "/";
@@ -125,8 +125,7 @@ ParseResult HttpRequestParser::validateUri(std::string &uri)
 
 ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& cursor, HttpRequest& request)
 {
-    // size_t end_schema;
-    
+
     size_t start_pos = cursor.get_position();
     size_t end_uri = start_pos;
     size_t start_uri = start_pos;
@@ -145,7 +144,6 @@ ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& c
         start_uri = start_pos;
         // return requestLine.substr(start_uri, requestLine.size());
     }
-
     else if (requestLine.compare(start_pos, 7, "http://") == 0)
     {
         cursor.pos += 7;
@@ -214,7 +212,10 @@ ParseResult HttpRequestParser::parseUriChunk(std::string& requestLine, Cursor& c
     cursor.skip_spaces();
     // std::cout << "char at HTTP: [" << requestLine[cursor.get_position()]  << "]\n";
     if (requestLine.compare(cursor.get_position(), 8, "HTTP/1.1") != 0)
+    {
+        request.parseState = ERROR;
         return PARSE_ERROR;
+    }
     // request.parseState = HEADERS;
     return PARSE_DONE;
 };
@@ -235,7 +236,6 @@ HTTP_Method HttpRequestParser::parseMethodChunk(std::string& requestLine, Cursor
             return HTTP_UNKNOWN;
         cursor.get_char();
     }
-
     size_t len = cursor.get_position() - start;
 
     if (len == 3)
@@ -253,7 +253,6 @@ HTTP_Method HttpRequestParser::parseMethodChunk(std::string& requestLine, Cursor
         if (requestLine.compare(start, len, "DELETE") == 0)
             return HTTP_DELETE;
     }
-
     return HTTP_UNKNOWN;
 };
 
@@ -273,7 +272,6 @@ ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, Htt
         return PARSE_ERROR;
     cursor.skip_spaces();
     return PARSE_DONE;
-
 };
 
 ParseResult HttpRequestParser::parseRequestLine(HttpRequest& request)

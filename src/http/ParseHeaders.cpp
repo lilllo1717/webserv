@@ -47,11 +47,10 @@ ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer, HttpReques
     {
         std::string val = headers_val;
         lowerLettersInHeaders(val);
-        request.keepAlive= (val.find("keep-alive") != std::string::npos);
+        request.keepAlive = (val.find("keep-alive") != std::string::npos);
     }
     request.headers[headers_key] = headers_val;
     std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";
-
     return PARSE_DONE;
 }
 
@@ -71,7 +70,6 @@ ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
         // std::cout << "string_to_check: " << string_to_check << "\n";
         if (parseSingleHeader(string_to_check, request) == PARSE_ERROR)
             return PARSE_ERROR;
-        std::cout << "buffer: [" << request.buffer << "]\n";
         request.buffer.erase(0, pos + 2);
     }
     return PARSE_DONE;

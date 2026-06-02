@@ -84,7 +84,6 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
     {
         if (request.parseState == REQ_LINE)
         {
-            // std::cout << "parse -> request.buffer: " << request.buffer << "\n";
             ParseResult parseRes = parseRequestLine(request);
             if (parseRes == PARSE_ERROR)
             {
@@ -102,12 +101,10 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             //     return parseRes;
             request.parseState = HEADERS;
             continue;
-
         }
         else if (request.parseState == HEADERS)
         {
             // std::cout << "entered headers parsing" << "\n";
-
             ParseResult parseRes = parseHeader(request);
             if (parseRes == PARSE_ERROR)
             {

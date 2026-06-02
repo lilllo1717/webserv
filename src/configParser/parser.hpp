@@ -56,7 +56,7 @@ struct serverConfig
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::map<int, std::string>	errorPages; // 404, 400, 500, etc.
 
-	size_t						clientMaxBodySize = 0;
+	size_t						clientMaxBodySize = 1 * 1024 * 1024;
 	bool						bodySizeSet = false;
 
 	std::vector<routeConfig>	routes; // routes inside this server

@@ -142,18 +142,28 @@ HttpResponse RequestHandler::buildAutoindex(const std::string& path, const std::
 	return response;
 }
 
-std::string	getMimeType(const std::string& path)
+std::string getMimeType(const std::string& path)
 {
-	if (path.find(".jpg") != std::string::npos)
-		return "image/jpeg";
-	if (path.find(".png") != std::string::npos)
-		return "image/png";
-	if (path.find(".gif") != std::string::npos)
-		return "image/gif";
-	if (path.find(".html") != std::string::npos)
-		return "text/html";
+    size_t dot = path.rfind('.');
+    if (dot == std::string::npos)
+        return "application/octet-stream";
 
-	return "application/octet-stream";
+    std::string ext = path.substr(dot);
+
+    if (ext == ".html") return "text/html";
+    if (ext == ".css")  return "text/css";
+    if (ext == ".js")   return "application/javascript";
+    if (ext == ".txt")  return "text/plain";
+    if (ext == ".jpg")  return "image/jpeg";
+    if (ext == ".jpeg") return "image/jpeg";
+    if (ext == ".png")  return "image/png";
+    if (ext == ".gif")  return "image/gif";
+    if (ext == ".webp") return "image/webp";
+    if (ext == ".pdf")  return "application/pdf";
+    if (ext == ".json") return "application/json";
+    if (ext == ".ico")  return "image/x-icon";
+
+    return "application/octet-stream";
 }
 
 HttpResponse	RequestHandler::serveStaticFile(const std::string& path)
@@ -252,7 +262,7 @@ HttpResponse RequestHandler::handlePOST(const HttpRequest& request, const routeC
         if (filename.empty())
             filename = "upload" + ext;
         else
-            filename += ext;        // e.g. "upload" → "upload.jpg"
+            filename += ext;
     }
 
     std::string fullPath = route.uploadPath + "/" + filename;
