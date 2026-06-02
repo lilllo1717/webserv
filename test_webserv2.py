@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-Webserv rigorous test suite
-Usage: python3 test_webserv.py [--host 127.0.0.1] [--port 8080]
+Webserv rigorous test suite — aligned to testConfig3.conf
+Usage: python3 test_webserv2.py [--host 127.0.0.1] [--port 8080]
+
+Config summary (port 8080, server_name example.com):
+  location /              GET only  root ./www  index index.html  autoindex off
+  location /testAutoindex GET only  root ./www  autoindex on
+  location /old-page      GET only  return 301 /new-page
+  location /new-page      GET only  root ./www  index index.html
+  location /upload        POST only upload_store ./uploads
+  location /uploads       GET DELETE  root ./uploads  autoindex on
+  location /cgi-bin       GET POST  cgi .php /usr/bin/php-cgi  cgi .py /usr/bin/python3
 """
 
 import http.client
@@ -19,15 +28,15 @@ import string
 DEFAULT_HOST  = "127.0.0.1"
 DEFAULT_PORT  = 8080
 
-# Always resolves to the directory containing this script
 PROJECT_ROOT  = os.path.dirname(os.path.abspath(__file__))
 
 IMAGE_PATH    = os.path.join(PROJECT_ROOT, "uploads", "cat.jpg")
-UPLOAD_URL    = "/cgi-bin/image.php"
-DOWNLOAD_URL  = "/uploads/cgi_upload.jpg"
+# CGI scripts live at /cgi-bin (mapped to ./cgi-bin)
+UPLOAD_URL    = "/cgi-bin/image.php"      # POST → saves to ./uploads/cgi_upload.jpg
+DOWNLOAD_URL  = "/uploads/cgi_upload.jpg" # served from /uploads location
 CGI_INFO_URL  = "/cgi-bin/info.py"
 CGI_CLOCK_URL = "/cgi-bin/worldclock.py"
-CGI_TESTER    = "/cgi-bin/cgi_tester"
+# No cgi_tester binary in config; no /public location in config
 
 PASS = "\033[92m[PASS]\033[0m"
 FAIL = "\033[91m[FAIL]\033[0m"
@@ -139,8 +148,9 @@ def test_static_get(host, port):
     r, _ = get(host, port, "/does_not_exist.html")
     check("GET missing file → 404",         r.status == 404, r.status, 404)
 
-    r, _ = get(host, port, "/public")
-    check("GET /public → 200 or 3xx",       r.status in (200, 301, 302), r.status)
+    # /new-page is a real location that serves ./www/index.html
+    r, _ = get(host, port, "/new-page")
+    check("GET /new-page → 200",            r.status == 200, r.status, 200)
 
 
 # ══════════════════════════════════════════════
@@ -188,6 +198,7 @@ def test_content_length(host, port):
 def test_method_not_allowed(host, port):
     section("4 · Method Not Allowed")
 
+    # / only allows GET
     r, _ = post(host, port, "/", body=b"x")
     check("POST to GET-only / → 405",       r.status == 405, r.status, 405)
 
@@ -200,22 +211,31 @@ def test_method_not_allowed(host, port):
     check("PATCH to GET-only / → 4xx",
           resp[:8] == b"HTTP/1.1" and b" 4" in resp[:12], resp[:12])
 
+    # /upload only allows POST — GET should be 405
+    r, _ = get(host, port, "/upload")
+    check("GET to POST-only /upload → 405", r.status == 405, r.status, 405)
+
 
 # ══════════════════════════════════════════════
 # SECTION 5 — Redirect
+# Config: location /old-page → return 301 /new-page
 # ══════════════════════════════════════════════
 def test_redirect(host, port):
     section("5 · Redirect")
 
-    r, _ = get(host, port, "/old")
-    check("GET /old → 301",                 r.status == 301, r.status, 301)
+    r, _ = get(host, port, "/old-page")
+    check("GET /old-page → 301",            r.status == 301, r.status, 301)
     loc = r.getheader("Location", "")
-    check("Location contains /new",         "/new" in loc, loc)
-    check("Location contains query string", "from=old" in loc, loc)
+    check("Location contains /new-page",    "/new-page" in loc, loc)
 
     # Redirect response must have no body or Content-Length: 0
     cl = r.getheader("Content-Length", "0")
     check("Redirect Content-Length is 0 or missing", cl in ("0", ""), cl)
+
+    # Follow the redirect manually — /new-page should serve index.html
+    r2, body2 = get(host, port, "/new-page")
+    check("GET /new-page → 200",            r2.status == 200, r2.status, 200)
+    check("/new-page body non-empty",       len(body2) > 0, len(body2))
 
 
 # ══════════════════════════════════════════════
@@ -279,10 +299,13 @@ def test_large_uri(host, port):
 
 # ══════════════════════════════════════════════
 # SECTION 8 — Autoindex
+# Config: /testAutoindex  autoindex on, root ./www
+#         /uploads        autoindex on, root ./uploads
 # ══════════════════════════════════════════════
 def test_autoindex(host, port):
     section("8 · Autoindex directory listing")
 
+    # /uploads has autoindex on — always has content (upload files exist)
     r, body = get(host, port, "/uploads/")
     body_str = body.decode(errors="replace")
     check("GET /uploads/ → 200",            r.status == 200, r.status, 200)
@@ -291,10 +314,19 @@ def test_autoindex(host, port):
           "text/html" in r.getheader("Content-Type", ""),
           r.getheader("Content-Type"))
 
-    # Without trailing slash — should still work or redirect
+    # Without trailing slash — should redirect or still work
     r, _ = get(host, port, "/uploads")
     check("GET /uploads (no slash) → 200 or 3xx",
           r.status in (200, 301, 302), r.status)
+
+    # /testAutoindex has autoindex on
+    r2, body2 = get(host, port, "/testAutoindex/")
+    if r2.status == 404:
+        skip("GET /testAutoindex/", "directory not present")
+    else:
+        check("GET /testAutoindex/ → 200",  r2.status == 200, r2.status, 200)
+        body_str2 = body2.decode(errors="replace")
+        check("testAutoindex listing has <a href", "<a href" in body_str2, body_str2[:300])
 
 
 # ══════════════════════════════════════════════
@@ -431,32 +463,11 @@ def test_cgi_query_string(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 16 — cgi_tester binary
-# ══════════════════════════════════════════════
-def test_cgi_tester(host, port):
-    section("16 · cgi_tester binary CGI")
-
-    r, body = get(host, port, CGI_TESTER)
-    if r.status == 404:
-        skip("cgi_tester GET", "binary not deployed or not executable")
-        return
-    check("GET cgi_tester → 200",           r.status == 200, r.status, 200)
-
-    # POST with form data
-    payload = b"var=hello&num=42"
-    r, body = post(host, port, CGI_TESTER, body=payload,
-                   headers={"Content-Type": "application/x-www-form-urlencoded"})
-    body_str = body.decode(errors="replace")
-    check("POST cgi_tester → 200",          r.status == 200, r.status, 200)
-    check("cgi_tester echoes VAR",          "VAR=" in body_str or "var=" in body_str.lower(),
-          body_str[:100])
-
-
-# ══════════════════════════════════════════════
-# SECTION 17 — Keep-Alive
+# SECTION 16 — Keep-Alive
+# (cgi_tester binary not in config — section renumbered)
 # ══════════════════════════════════════════════
 def test_keep_alive(host, port):
-    section("17 · Keep-Alive — 5 requests on one connection")
+    section("16 · Keep-Alive — 5 requests on one connection")
 
     conn = make_connection(host, port)
     try:
@@ -476,10 +487,10 @@ def test_keep_alive(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 18 — Connection: close
+# SECTION 17 — Connection: close
 # ══════════════════════════════════════════════
 def test_connection_close(host, port):
-    section("18 · Connection: close honoured")
+    section("17 · Connection: close honoured")
 
     r, _ = get(host, port, "/", headers={"Connection": "close"})
     check("Response has Connection: close",
@@ -488,10 +499,10 @@ def test_connection_close(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 19 — Concurrent connections
+# SECTION 18 — Concurrent connections
 # ══════════════════════════════════════════════
 def test_concurrent(host, port):
-    section("19 · Concurrent connections (20 threads)")
+    section("18 · Concurrent connections (20 threads)")
 
     outcomes = []
     lock = threading.Lock()
@@ -540,10 +551,10 @@ def test_concurrent(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 20 — Sequential CGI stability
+# SECTION 19 — Sequential CGI stability
 # ══════════════════════════════════════════════
 def test_sequential_cgi(host, port):
-    section("20 · Sequential CGI — server stays stable")
+    section("19 · Sequential CGI — server stays stable")
 
     for i in range(10):
         payload = f"seq-request-{i}".encode()
@@ -556,10 +567,10 @@ def test_sequential_cgi(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 21 — Slow client
+# SECTION 20 — Slow client
 # ══════════════════════════════════════════════
 def test_slow_client(host, port):
-    section("21 · Slow client — headers sent in chunks")
+    section("20 · Slow client — headers sent in chunks")
 
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -587,10 +598,10 @@ def test_slow_client(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 22 — Pipelined requests (back-to-back raw)
+# SECTION 21 — Pipelined requests
 # ══════════════════════════════════════════════
 def test_pipelining(host, port):
-    section("22 · Pipelined requests on one connection")
+    section("21 · Pipelined requests on one connection")
 
     req1 = f"GET / HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: keep-alive\r\n\r\n".encode()
     req2 = f"GET /does_not_exist HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
@@ -619,30 +630,28 @@ def test_pipelining(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 23 — Body too large (413)
+# SECTION 22 — Body too large (413)
+# Manager._recvBufferSize = 100000; config client_max_body_size = 5M
 # ══════════════════════════════════════════════
 def test_body_too_large(host, port):
-    section("23 · Body too large → 413")
+    section("22 · Body too large → 413")
 
-    # Send Content-Length larger than server's limit
-    # Server limit is 100000 bytes (_recvBufferSize)
     huge = b"x" * 101000
     try:
         r, _ = post(host, port, UPLOAD_URL, body=huge,
                     headers={"Content-Type": "application/octet-stream"})
         check("Body > limit → 413",         r.status == 413, r.status, 413)
     except Exception as e:
-        # Server may close connection instead
         check("Body > limit → connection closed or 413", True, str(e))
 
     check("Server alive after oversized body", server_alive(host, port))
 
 
 # ══════════════════════════════════════════════
-# SECTION 24 — Empty body POST
+# SECTION 23 — Empty body POST
 # ══════════════════════════════════════════════
 def test_empty_body_post(host, port):
-    section("24 · POST with empty body")
+    section("23 · POST with empty body")
 
     r, body = post(host, port, UPLOAD_URL, body=b"",
                    headers={"Content-Type": "text/plain"})
@@ -652,12 +661,11 @@ def test_empty_body_post(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 25 — Content-Length mismatch
+# SECTION 24 — Content-Length mismatch
 # ══════════════════════════════════════════════
 def test_content_length_mismatch(host, port):
-    section("25 · Content-Length mismatch")
+    section("24 · Content-Length mismatch")
 
-    # Claim 100 bytes but send 10
     raw = (
         f"POST {UPLOAD_URL} HTTP/1.1\r\n"
         f"Host: {host}:{port}\r\n"
@@ -667,8 +675,6 @@ def test_content_length_mismatch(host, port):
         f"only10byte"
     ).encode()
     resp = raw_request(host, port, raw, timeout=6)
-    # Server should either timeout waiting for more data (no response)
-    # or return 400. It must NOT crash.
     check("CL mismatch: server responds or times out (no crash)",
           len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
 
@@ -676,12 +682,11 @@ def test_content_length_mismatch(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 26 — Encoded URI
+# SECTION 25 — Encoded URI
 # ══════════════════════════════════════════════
 def test_encoded_uri(host, port):
-    section("26 · URL-encoded URI characters")
+    section("25 · URL-encoded URI characters")
 
-    # %2F is encoded slash — should be treated as literal, not path separator
     r, _ = get(host, port, "/does%20not%20exist")
     check("Encoded spaces in URI → 404 (not crash)", r.status == 404, r.status, 404)
 
@@ -693,10 +698,10 @@ def test_encoded_uri(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 27 — Path traversal
+# SECTION 26 — Path traversal
 # ══════════════════════════════════════════════
 def test_path_traversal(host, port):
-    section("27 · Path traversal attempts")
+    section("26 · Path traversal attempts")
 
     payloads = [
         "/../etc/passwd",
@@ -713,16 +718,16 @@ def test_path_traversal(host, port):
                   "root:x:" not in body_str and r.status in (400, 403, 404, 200),
                   f"status={r.status} body={body_str[:50]}")
         except Exception as e:
-            check(f"Traversal {path[:30]}", True, str(e))  # connection closed = safe
+            check(f"Traversal {path[:30]}", True, str(e))
 
     check("Server alive after traversal attempts", server_alive(host, port))
 
 
 # ══════════════════════════════════════════════
-# SECTION 28 — HEAD method
+# SECTION 27 — HEAD method
 # ══════════════════════════════════════════════
 def test_head_method(host, port):
-    section("28 · HEAD method")
+    section("27 · HEAD method")
 
     try:
         conn = make_connection(host, port)
@@ -733,7 +738,6 @@ def test_head_method(host, port):
         r = conn.getresponse()
         body = r.read()
         conn.close()
-        # HEAD: must return headers same as GET, body must be empty
         check("HEAD / → 200 or 405",        r.status in (200, 405), r.status)
         if r.status == 200:
             check("HEAD response body empty", len(body) == 0, len(body))
@@ -742,10 +746,10 @@ def test_head_method(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 29 — Response headers present
+# SECTION 28 — Required response headers
 # ══════════════════════════════════════════════
 def test_response_headers(host, port):
-    section("29 · Required response headers")
+    section("28 · Required response headers")
 
     r, _ = get(host, port, "/")
     check("Content-Length header present",  r.getheader("Content-Length") is not None,
@@ -757,10 +761,10 @@ def test_response_headers(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 30 — Server survives rapid reconnects
+# SECTION 29 — Rapid reconnects
 # ══════════════════════════════════════════════
 def test_rapid_reconnects(host, port):
-    section("30 · Rapid connect/disconnect (no body)")
+    section("29 · Rapid connect/disconnect (no body)")
 
     errors = []
     for i in range(20):
@@ -768,7 +772,7 @@ def test_rapid_reconnects(host, port):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(2)
             s.connect((host, port))
-            s.close()  # close immediately without sending anything
+            s.close()
         except Exception as e:
             errors.append(str(e))
 
@@ -777,33 +781,31 @@ def test_rapid_reconnects(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 31 — Upload then delete
+# SECTION 30 — Upload then verify
 # ══════════════════════════════════════════════
-def test_upload_then_delete(host, port):
-    section("31 · Upload file then DELETE it")
+def test_upload_then_verify(host, port):
+    section("30 · Upload file then verify via /uploads")
 
-    # Upload via CGI
     if not os.path.exists(IMAGE_PATH):
-        skip("Upload+delete", f"{IMAGE_PATH} not found")
+        skip("Upload+verify", f"{IMAGE_PATH} not found")
         return
 
     with open(IMAGE_PATH, "rb") as f:
         img = f.read()
     r, _ = post(host, port, UPLOAD_URL, body=img,
                 headers={"Content-Type": "image/jpeg"})
-    check("Upload for delete test → 200",   r.status == 200, r.status, 200)
+    check("Upload for verify test → 200",   r.status == 200, r.status, 200)
     time.sleep(0.1)
 
-    # Verify it exists
     r, _ = get(host, port, DOWNLOAD_URL)
     check("File exists after upload → 200", r.status == 200, r.status, 200)
 
 
 # ══════════════════════════════════════════════
-# SECTION 32 — Large number of headers
+# SECTION 31 — Many headers
 # ══════════════════════════════════════════════
 def test_many_headers(host, port):
-    section("32 · Request with many headers")
+    section("31 · Request with many headers")
 
     extra = {f"X-Custom-{i}": f"value{i}" for i in range(50)}
     extra["Connection"] = "close"
@@ -818,15 +820,11 @@ def test_many_headers(host, port):
 
 
 # ══════════════════════════════════════════════
-# Summary
-# ══════════════════════════════════════════════
-# ══════════════════════════════════════════════
-# SECTION 33 — Chunked Transfer Encoding
+# SECTION 32 — Chunked Transfer-Encoding POST
 # ══════════════════════════════════════════════
 def test_chunked_upload(host, port):
-    section("33 · Chunked Transfer-Encoding POST")
+    section("32 · Chunked Transfer-Encoding POST")
 
-    # Build a chunked body manually
     data = b"hello chunked world"
     chunk = f"{len(data):x}\r\n".encode() + data + b"\r\n" + b"0\r\n\r\n"
 
@@ -847,10 +845,10 @@ def test_chunked_upload(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 34 — Multiple query string params
+# SECTION 33 — Multiple query string params
 # ══════════════════════════════════════════════
 def test_multi_query_string(host, port):
-    section("34 · Multiple query string parameters")
+    section("33 · Multiple query string parameters")
 
     r, body = get(host, port, f"{CGI_INFO_URL}?a=1&b=hello&c=world&d=42")
     if r.status == 404:
@@ -862,7 +860,6 @@ def test_multi_query_string(host, port):
           "a=1" in body_str and "b=hello" in body_str and "c=world" in body_str,
           body_str)
 
-    # Special chars in query string
     r2, body2 = get(host, port, f"{CGI_INFO_URL}?msg=hello+world&x=%41")
     body_str2 = body2.decode(errors="replace")
     check("Query string with encoded chars → 200", r2.status == 200, r2.status, 200)
@@ -870,19 +867,15 @@ def test_multi_query_string(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 35 — CGI timeout / hanging script
+# SECTION 34 — CGI timeout / hanging script
 # ══════════════════════════════════════════════
 def test_cgi_timeout(host, port):
-    section("35 · CGI timeout — hanging script")
+    section("34 · CGI timeout — non-existent CGI script")
 
-    # Create a simple hanging CGI script path
-    # We test by checking server stays alive after a request that would hang
-    # Use a very short timeout on our side
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(3)
         s.connect((host, port))
-        # Request a non-existent CGI that would cause issues
         req = (
             f"GET /cgi-bin/hang_forever.php HTTP/1.1\r\n"
             f"Host: {host}:{port}\r\n"
@@ -900,47 +893,44 @@ def test_cgi_timeout(host, port):
             pass
         s.close()
         resp = b"".join(chunks)
-        # Should get 404 (script doesn't exist) or timeout response
         check("Non-existent CGI → 404 or 500",
               len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
     except Exception as e:
-        check("CGI timeout handling", True, str(e))  # connection refused = ok
+        check("CGI timeout handling", True, str(e))
 
     check("Server alive after CGI timeout test", server_alive(host, port))
 
 
 # ══════════════════════════════════════════════
-# SECTION 36 — Custom error pages
+# SECTION 35 — Custom error pages
+# Config has error_page 404 and 500 configured
 # ══════════════════════════════════════════════
 def test_error_pages(host, port):
-    section("36 · Custom error pages")
+    section("35 · Custom error pages")
 
-    # 404 error page
     r, body = get(host, port, "/definitely_does_not_exist_xyz.html")
     body_str = body.decode(errors="replace")
-    check("404 → custom error page served",  r.status == 404, r.status, 404)
-    check("404 body non-empty",              len(body) > 0, len(body))
-    # If custom error page configured, body should not be the default
+    check("404 → correct status",           r.status == 404, r.status, 404)
+    check("404 body non-empty",             len(body) > 0, len(body))
     check("404 response has Content-Type",
           r.getheader("Content-Type") is not None, r.getheader("Content-Type"))
 
-    # 405 error page
-    r2, body2 = get(host, port, "/upload")  # GET on POST-only route
+    # POST to GET-only location → 405; body must not be empty
+    r2, body2 = post(host, port, "/", body=b"x")
     check("405 → correct status",           r2.status == 405, r2.status, 405)
     check("405 body non-empty",             len(body2) > 0, len(body2))
 
 
 # ══════════════════════════════════════════════
-# SECTION 37 — DELETE on upload location
+# SECTION 36 — DELETE file from /uploads
+# Config: location /uploads  methods GET DELETE  root ./uploads
 # ══════════════════════════════════════════════
 def test_delete_file(host, port):
-    section("37 · DELETE uploaded file")
+    section("36 · DELETE file from /uploads")
 
-    # First upload a file via CGI
     test_filename = "delete_test.txt"
     upload_path = os.path.join(PROJECT_ROOT, "uploads", test_filename)
 
-    # Create the file directly for the test
     try:
         with open(upload_path, "w") as f:
             f.write("delete me")
@@ -948,15 +938,12 @@ def test_delete_file(host, port):
         skip("DELETE test", f"Cannot create test file: {e}")
         return
 
-    # Verify it's accessible
     r, _ = get(host, port, f"/uploads/{test_filename}")
     check("File exists before DELETE → 200", r.status == 200, r.status, 200)
 
-    # DELETE it
     r2, _ = delete(host, port, f"/uploads/{test_filename}")
     check("DELETE file → 204 or 200",       r2.status in (200, 204), r2.status)
 
-    # Verify it's gone
     time.sleep(0.1)
     r3, _ = get(host, port, f"/uploads/{test_filename}")
     check("File gone after DELETE → 404",   r3.status == 404, r3.status, 404)
@@ -965,10 +952,11 @@ def test_delete_file(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 38 — POST to /upload location
+# SECTION 37 — POST to /upload (non-CGI upload)
+# Config: location /upload  methods POST  upload_store ./uploads
 # ══════════════════════════════════════════════
 def test_upload_location(host, port):
-    section("38 · POST to /upload location (non-CGI)")
+    section("37 · POST to /upload location (non-CGI)")
 
     payload = b"plain text file content for upload test"
     r, body = post(host, port, "/upload/testfile.txt", body=payload,
@@ -978,7 +966,6 @@ def test_upload_location(host, port):
 
     if r.status in (200, 201):
         time.sleep(0.1)
-        # Try to retrieve it
         r2, body2 = get(host, port, "/uploads/testfile.txt")
         check("Uploaded file retrievable → 200", r2.status == 200, r2.status, 200)
         if r2.status == 200:
@@ -989,39 +976,13 @@ def test_upload_location(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 39 — Serving files from /public
-# ══════════════════════════════════════════════
-def test_public_location(host, port):
-    section("39 · Files served from /public location")
-
-    r, body = get(host, port, "/public")
-    check("GET /public → 200 or 3xx",       r.status in (200, 301, 302), r.status)
-
-    r2, body2 = get(host, port, "/public/")
-    check("GET /public/ → 200",             r2.status == 200, r2.status, 200)
-    check("GET /public/ body non-empty",    len(body2) > 0, len(body2))
-
-    # index.html should be served
-    r3, body3 = get(host, port, "/public/index.html")
-    if r3.status == 404:
-        skip("GET /public/index.html", "file not present in www/")
-    else:
-        check("GET /public/index.html → 200", r3.status == 200, r3.status, 200)
-        check("Content-Type text/html",
-              "text/html" in r3.getheader("Content-Type", ""),
-              r3.getheader("Content-Type"))
-
-
-# ══════════════════════════════════════════════
-# SECTION 40 — Binary file integrity (non-JPEG)
+# SECTION 38 — Binary file integrity
 # ══════════════════════════════════════════════
 def test_binary_integrity(host, port):
-    section("40 · Binary file round-trip (random bytes)")
+    section("38 · Binary file round-trip (random bytes)")
 
-    # Generate random binary data
     random_data = bytes(range(256)) * 40  # 10240 bytes, all byte values
 
-    # Upload via CGI
     r, body = post(host, port, UPLOAD_URL, body=random_data,
                    headers={"Content-Type": "application/octet-stream"})
     body_str = body.decode(errors="replace")
@@ -1037,17 +998,15 @@ def test_binary_integrity(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 41 — CGI error (script exits non-zero)
+# SECTION 39 — CGI error stability
 # ══════════════════════════════════════════════
 def test_cgi_error_stability(host, port):
-    section("41 · CGI error — server stays alive after CGI failure")
+    section("39 · CGI error — server stays alive after CGI failure")
 
-    # Request a PHP file that doesn't exist → CGI will fail
     r, body = get(host, port, "/cgi-bin/nonexistent_script.php")
     check("Non-existent CGI → 404 or 500",  r.status in (404, 500), r.status)
     check("Error response has body",        len(body) > 0, len(body))
 
-    # Server must still serve normal requests after CGI failure
     for i in range(3):
         r2, _ = get(host, port, "/")
         check(f"Normal GET after CGI error {i+1}/3 → 200",
@@ -1057,12 +1016,11 @@ def test_cgi_error_stability(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 42 — Large static file
+# SECTION 40 — Large static file
 # ══════════════════════════════════════════════
 def test_large_static_file(host, port):
-    section("42 · Large static file — Content-Length accuracy")
+    section("40 · Large static file — Content-Length accuracy")
 
-    # Use cat.jpg which is in www/ (22312 bytes)
     r, body = get(host, port, "/cat.jpg")
     if r.status == 404:
         skip("Large static file", "cat.jpg not in www/")
@@ -1075,12 +1033,11 @@ def test_large_static_file(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 43 — Header whitespace handling
+# SECTION 41 — Header whitespace handling
 # ══════════════════════════════════════════════
 def test_header_whitespace(host, port):
-    section("43 · Header value whitespace trimming")
+    section("41 · Header value whitespace trimming")
 
-    # Extra spaces around header value
     raw = (
         f"GET / HTTP/1.1\r\n"
         f"Host:   {host}:{port}   \r\n"
@@ -1095,12 +1052,11 @@ def test_header_whitespace(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 44 — Case-insensitive headers
+# SECTION 42 — Case-insensitive headers
 # ══════════════════════════════════════════════
 def test_header_case_insensitive(host, port):
-    section("44 · Case-insensitive header names")
+    section("42 · Case-insensitive header names")
 
-    # All uppercase headers
     raw = (
         f"GET / HTTP/1.1\r\n"
         f"HOST: {host}:{port}\r\n"
@@ -1110,7 +1066,6 @@ def test_header_case_insensitive(host, port):
     resp = raw_request(host, port, raw)
     check("UPPERCASE headers → 200",        b"200" in resp[:20], resp[:20])
 
-    # Mixed case
     raw2 = (
         f"GET / HTTP/1.1\r\n"
         f"hOsT: {host}:{port}\r\n"
@@ -1124,10 +1079,10 @@ def test_header_case_insensitive(host, port):
 
 
 # ══════════════════════════════════════════════
-# SECTION 45 — POST without Content-Length
+# SECTION 43 — POST without Content-Length
 # ══════════════════════════════════════════════
 def test_post_no_content_length(host, port):
-    section("45 · POST without Content-Length header")
+    section("43 · POST without Content-Length header")
 
     raw = (
         f"POST {UPLOAD_URL} HTTP/1.1\r\n"
@@ -1138,33 +1093,438 @@ def test_post_no_content_length(host, port):
         f"body without content length"
     ).encode()
     resp = raw_request(host, port, raw, timeout=6)
-    # Should return 411 (Length Required) or 400, or treat as 0-length body
     check("POST no Content-Length → 4xx or 200",
           resp[:8] == b"HTTP/1.1", resp[:20])
     check("Server alive after no-CL POST", server_alive(host, port))
 
 
 # ══════════════════════════════════════════════
-# SECTION 46 — Index file from subdirectory
+# SECTION 44 — Index file from /testAutoindex
+# Config: location /testAutoindex  autoindex on  root ./www
 # ══════════════════════════════════════════════
 def test_subdir_index(host, port):
-    section("46 · Index file served from subdirectory")
+    section("44 · Autoindex of /testAutoindex")
 
-    # GET /public/ should serve index.html if it exists
-    r, body = get(host, port, "/public/")
-    check("GET /public/ → 200",             r.status == 200, r.status, 200)
+    r, body = get(host, port, "/testAutoindex/")
+    if r.status == 404:
+        skip("GET /testAutoindex/", "directory not present on disk")
+        return
+    check("GET /testAutoindex/ → 200",      r.status == 200, r.status, 200)
     body_str = body.decode(errors="replace")
-    check("/public/ body non-empty",        len(body) > 0, len(body))
+    check("/testAutoindex/ body non-empty", len(body) > 0, len(body))
     check("Content-Type text/html",
           "text/html" in r.getheader("Content-Type", ""),
           r.getheader("Content-Type"))
 
-    # Autoindex of testAutoindex dir if it exists
-    r2, body2 = get(host, port, "/testAutoindex/")
-    if r2.status == 404:
-        skip("Autoindex testAutoindex/", "directory not accessible via URL")
-    else:
-        check("GET /testAutoindex/ → 200",  r2.status == 200, r2.status, 200)
+    # Without trailing slash — /testAutoindex maps to ./www/testAutoindex (dir)
+    r2, _ = get(host, port, "/testAutoindex")
+    check("GET /testAutoindex (no slash) → 200 or 3xx",
+          r2.status in (200, 301, 302), r2.status)
+
+
+# ══════════════════════════════════════════════
+# Summary
+# ══════════════════════════════════════════════
+# ══════════════════════════════════════════════
+# SECTION 47 — HTTP Request Smuggling
+# ══════════════════════════════════════════════
+def test_request_smuggling(host, port):
+    section("47 · HTTP Request Smuggling (CL + TE conflict)")
+
+    # Both Content-Length and Transfer-Encoding present — server must reject or
+    # use one consistently, never allow body desync
+    raw = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Content-Length: 6\r\n"
+        f"Transfer-Encoding: chunked\r\n"
+        f"Connection: close\r\n\r\n"
+        f"0\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=6)
+    check("CL+TE conflict → 4xx or handled safely",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after smuggling attempt", server_alive(host, port))
+
+    # TE says chunked but CL says 999 — must not read 999 bytes
+    raw2 = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Transfer-Encoding: chunked\r\n"
+        f"Content-Length: 999\r\n"
+        f"Connection: close\r\n\r\n"
+        f"5\r\nhello\r\n0\r\n\r\n"
+    ).encode()
+    resp2 = raw_request(host, port, raw2, timeout=6)
+    check("TE+CL smuggling variant → no crash",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after TE+CL variant", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 48 — CRLF Injection
+# ══════════════════════════════════════════════
+def test_crlf_injection(host, port):
+    section("48 · CRLF injection in headers")
+
+    # Try to inject extra header via Host value
+    raw = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host: localhost:8080\r\nX-Injected: evil\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp = raw_request(host, port, raw, timeout=5)
+    # Server should either reject (400) or ignore injected header
+    # Must NOT echo back X-Injected in response headers
+    check("CRLF in Host → 4xx or 200",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("CRLF injection not reflected",
+          b"X-Injected" not in resp, resp[:200])
+    check("Server alive after CRLF injection", server_alive(host, port))
+
+    # CRLF in URI query string
+    raw2 = (
+        f"GET /?foo=bar%0d%0aX-Evil: injected HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("CRLF in query → no header injection",
+          b"X-Evil" not in resp2, resp2[:200])
+    check("Server alive after query CRLF", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 49 — Host header injection
+# ══════════════════════════════════════════════
+def test_host_injection(host, port):
+    section("49 · Host header injection")
+
+    # Host with extra header appended
+    raw = (
+        f"GET / HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\nX-Forwarded-For: 1.2.3.4\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Host injection → 4xx or 200 (no crash)",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+
+    # Host pointing to external domain
+    raw2 = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host: evil.attacker.com\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    # Server may 400, 404, or serve default — must not crash
+    check("External Host → handled safely",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after host injection", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 50 — Absolute URI in request line
+# ══════════════════════════════════════════════
+def test_absolute_uri(host, port):
+    section("50 · Absolute URI in request line")
+
+    raw = (
+        f"GET http://evil.com/steal HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    # Server must not proxy to evil.com — should 400 or 404
+    check("Absolute URI → 4xx or handled locally",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Absolute URI not proxied (no 200 from evil.com)",
+          b"evil" not in resp.lower()[:500], resp[:100])
+    check("Server alive after absolute URI", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 51 — Fragment in URI
+# ══════════════════════════════════════════════
+def test_uri_fragment(host, port):
+    section("51 · URI with fragment identifier")
+
+    # Fragments should be stripped by client normally but if sent to server:
+    raw = (
+        f"GET /index.html#../../etc/passwd HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    body = resp[resp.find(b"\r\n\r\n")+4:] if b"\r\n\r\n" in resp else b""
+    check("Fragment in URI → no /etc/passwd leak",
+          b"root:x:" not in body, body[:100])
+    check("Fragment URI → 4xx or 200",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after fragment URI", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 52 — Deeply nested path
+# ══════════════════════════════════════════════
+def test_deep_path(host, port):
+    section("52 · Excessively nested URI path")
+
+    deep = "/a" * 250  # 500 chars, 250 levels deep
+    raw = f"GET {deep} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Deep nested path → 4xx or 404",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after deep path", server_alive(host, port))
+
+    # Path with many dots
+    dotty = "/../" * 100 + "etc/passwd"
+    raw2 = f"GET /{dotty} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    body2 = resp2[resp2.find(b"\r\n\r\n")+4:] if b"\r\n\r\n" in resp2 else b""
+    check("100x ../ traversal → no passwd",
+          b"root:x:" not in body2, body2[:50])
+    check("Server alive after dotty path", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 53 — Zero Content-Length with body
+# ══════════════════════════════════════════════
+def test_zero_cl_with_body(host, port):
+    section("53 · Content-Length: 0 but body present")
+
+    raw = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Content-Type: text/plain\r\n"
+        f"Content-Length: 0\r\n"
+        f"Connection: close\r\n\r\n"
+        f"this body should be ignored"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("CL:0 with body → 200 (body ignored)",
+          b"200" in resp[:20], resp[:20])
+    check("Server alive after CL:0 + body", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 54 — Negative Content-Length
+# ══════════════════════════════════════════════
+def test_negative_content_length(host, port):
+    section("54 · Negative Content-Length")
+
+    raw = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Content-Type: text/plain\r\n"
+        f"Content-Length: -1\r\n"
+        f"Connection: close\r\n\r\n"
+        f"hello"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Negative CL → 4xx",
+          len(resp) == 0 or (resp[:8] == b"HTTP/1.1" and b" 4" in resp[:12]),
+          resp[:20])
+    check("Server alive after negative CL", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 55 — Overflow Content-Length
+# ══════════════════════════════════════════════
+def test_overflow_content_length(host, port):
+    section("55 · Overflow Content-Length value")
+
+    for cl_val in ["99999999999999999999", "18446744073709551616", "999999999999999"]:
+        raw = (
+            f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+            f"Host: {host}:{port}\r\n"
+            f"Content-Type: text/plain\r\n"
+            f"Content-Length: {cl_val}\r\n"
+            f"Connection: close\r\n\r\n"
+        ).encode()
+        resp = raw_request(host, port, raw, timeout=5)
+        check(f"CL={cl_val[:15]} → 4xx or close",
+              len(resp) == 0 or (resp[:8] == b"HTTP/1.1" and b" 4" in resp[:12]),
+              resp[:20])
+
+    check("Server alive after overflow CL", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 56 — Repeated headers
+# ══════════════════════════════════════════════
+def test_repeated_headers(host, port):
+    section("56 · Repeated header names")
+
+    # 100 Content-Type headers
+    hdrs = "Content-Type: text/plain\r\n" * 100
+    raw = (
+        f"GET / HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        + hdrs +
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=8)
+    check("100 repeated headers → responds",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after repeated headers", server_alive(host, port))
+
+    # Repeated Host headers
+    raw2 = (
+        f"GET / HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Host: evil.com\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("Duplicate Host headers → 4xx or 200",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after duplicate Host", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 57 — Extra spaces in request line
+# ══════════════════════════════════════════════
+def test_request_line_spaces(host, port):
+    section("57 · Extra spaces in request line")
+
+    # Double space between method and URI
+    raw = f"GET  / HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Double space in request line → 4xx or 200",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+
+    # Trailing space after HTTP version
+    raw2 = f"GET / HTTP/1.1 \r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("Trailing space after version → 4xx or 200",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+
+    # Leading spaces before method
+    raw3 = f"  GET / HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp3 = raw_request(host, port, raw3, timeout=5)
+    check("Leading spaces before method → 4xx",
+          len(resp3) == 0 or (resp3[:8] == b"HTTP/1.1" and b" 4" in resp3[:12]),
+          resp3[:20])
+
+    check("Server alive after space variants", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 58 — Tab in header
+# ══════════════════════════════════════════════
+def test_tab_in_header(host, port):
+    section("58 · Tab character in header value")
+
+    raw = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host: localhost:8080\r\n"
+        b"Content-Type:\tapplication/json\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Tab in header value → 200 or 400",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after tab in header", server_alive(host, port))
+
+    # Tab instead of space after colon (obs-fold)
+    raw2 = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host:\tlocalhost:8080\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("Tab instead of space after colon → handled",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after tab variants", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 59 — Slow Loris
+# ══════════════════════════════════════════════
+def test_slow_loris(host, port):
+    section("59 · Slow Loris — incomplete request never finishes")
+
+    # Open connection, send partial headers very slowly, never complete
+    # Server should eventually timeout and close — and keep serving others
+    sockets = []
+    try:
+        for _ in range(5):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(2)
+            try:
+                s.connect((host, port))
+                # Send partial request — never send final \r\n\r\n
+                s.send(f"GET / HTTP/1.1\r\nHost: {host}:{port}\r\n".encode())
+                sockets.append(s)
+            except Exception:
+                pass
+
+        time.sleep(1)
+
+        # Server must still respond to normal requests
+        check("Server responds during slow loris", server_alive(host, port))
+
+    finally:
+        for s in sockets:
+            try:
+                s.close()
+            except Exception:
+                pass
+
+    time.sleep(0.5)
+    check("Server alive after slow loris", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 60 — CGI env injection via query string
+# ══════════════════════════════════════════════
+def test_cgi_env_injection(host, port):
+    section("60 · CGI environment variable injection")
+
+    # Newline in query string trying to inject env var
+    r, body = get(host, port, f"{CGI_INFO_URL}?foo=bar%0aHTTP_INJECTED=evil")
+    if r.status == 404:
+        skip("CGI env injection", "info.py not deployed")
+        return
+    body_str = body.decode(errors="replace")
+    check("Query with newline → 200 or 400",  r.status in (200, 400), r.status)
+    check("Injected env var not in output",
+          "HTTP_INJECTED" not in body_str or "evil" not in body_str,
+          body_str[:200])
+
+    # Null byte in query string
+    r2, body2 = get(host, port, f"{CGI_INFO_URL}?foo=bar%00baz")
+    body_str2 = body2.decode(errors="replace")
+    check("Null byte in query → 200 or 400",  r2.status in (200, 400), r2.status)
+    check("Server alive after env injection",  server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 61 — POST binary body with null bytes
+# ══════════════════════════════════════════════
+def test_binary_null_bytes(host, port):
+    section("61 · POST binary body containing null bytes")
+
+    # Body with null bytes interspersed — must pass through intact
+    payload = b"start\x00middle\x00\x00end"
+    expected = len(payload)
+
+    r, body = post(host, port, UPLOAD_URL, body=payload,
+                   headers={"Content-Type": "application/octet-stream"})
+    body_str = body.decode(errors="replace")
+    check("POST with null bytes → 200",      r.status == 200, r.status, 200)
+    check(f"PHP reports {expected} bytes",   f"received: {expected}" in body_str, body_str)
+
+    # All-zeros body
+    zeros = b"\x00" * 1024
+    r2, body2 = post(host, port, UPLOAD_URL, body=zeros,
+                     headers={"Content-Type": "application/octet-stream"})
+    body_str2 = body2.decode(errors="replace")
+    check("POST all-zero body → 200",        r2.status == 200, r2.status, 200)
+    check("PHP reports 1024 bytes",          "received: 1024" in body_str2, body_str2)
+
+    check("Server alive after null-byte POST", server_alive(host, port))
 
 
 # ══════════════════════════════════════════════
@@ -1615,7 +1975,6 @@ if __name__ == "__main__":
     test_cgi_python_post(args.host, args.port)
     test_cgi_worldclock(args.host, args.port)
     test_cgi_query_string(args.host, args.port)
-    test_cgi_tester(args.host, args.port)
     test_keep_alive(args.host, args.port)
     test_connection_close(args.host, args.port)
     test_concurrent(args.host, args.port)
@@ -1630,7 +1989,7 @@ if __name__ == "__main__":
     test_head_method(args.host, args.port)
     test_response_headers(args.host, args.port)
     test_rapid_reconnects(args.host, args.port)
-    test_upload_then_delete(args.host, args.port)
+    test_upload_then_verify(args.host, args.port)
     test_many_headers(args.host, args.port)
     test_chunked_upload(args.host, args.port)
     test_multi_query_string(args.host, args.port)
@@ -1638,7 +1997,6 @@ if __name__ == "__main__":
     test_error_pages(args.host, args.port)
     test_delete_file(args.host, args.port)
     test_upload_location(args.host, args.port)
-    test_public_location(args.host, args.port)
     test_binary_integrity(args.host, args.port)
     test_cgi_error_stability(args.host, args.port)
     test_large_static_file(args.host, args.port)

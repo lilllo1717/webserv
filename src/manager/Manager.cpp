@@ -379,6 +379,7 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
             _poll_fds[i].events &= ~POLLIN;
             _poll_fds[i].events |= POLLOUT;
         }
+        
         else if (result.decision == DES_REDIRECT)
         {
             result.response.closeConnection = !request.keepAlive;
@@ -392,8 +393,10 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
             CgiState state;
             if (!cgi.executeCgi(state))
             {
-                HttpResponse response;
-                response.statusCode = static_cast<HTTP_StatusCode>(500);
+                HttpResponse response = RequestHandler::buildErrorResponse(
+                    static_cast<HTTP_StatusCode>(500),
+                    result.matchResult.selectedServerCon);
+                response.closeConnection = !request.keepAlive;
                 client->appendToSendBuffer(serializeHttpResponse(response));
                 _poll_fds[i].events &= ~POLLIN;
                 _poll_fds[i].events |= POLLOUT;
