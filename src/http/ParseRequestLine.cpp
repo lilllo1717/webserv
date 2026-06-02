@@ -6,6 +6,23 @@ bool is_hex(char c)
     return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
 }
 
+int hexCharToInt(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    return -1;
+}
+
+// Two hex chars to one byte using bit shifting
+char hexToChar(char high, char low)
+{
+    return (hexCharToInt(high) << 4) | hexCharToInt(low);
+}
+
 bool validateUriChars(std::string& uri)
 {
     for (size_t i = 0; i < uri.size(); i++)
@@ -24,30 +41,15 @@ bool validateUriChars(std::string& uri)
 
             if (!is_hex(uri[i + 1]) || !is_hex(uri[i + 2]))
                 return false;
-
+            unsigned char decoded = static_cast<unsigned char>(
+                hexToChar(uri[i + 1], uri[i + 2]));
+            if (decoded < 32 || decoded == 127)
+                return false;
             i += 2;
         }
     }
     return true;
 }
-
-int hexCharToInt(char c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
-    return -1;
-}
-
-// Two hex chars to one byte using bit shifting
-char hexToChar(char high, char low)
-{
-    return (hexCharToInt(high) << 4) | hexCharToInt(low);
-}
-
 
 std::string decodeUri(std::string& uri)
 {
@@ -259,7 +261,7 @@ HTTP_Method HttpRequestParser::parseMethodChunk(std::string& requestLine, Cursor
 ParseResult HttpRequestParser::parseRawRequestLine(std::string& requestLine, HttpRequest& request)
 {
     Cursor cursor(requestLine);
-    cursor.skip_spaces();
+    // cursor.skip_spaces();
     request.method = parseMethodChunk(requestLine, cursor);
     // std::cout << "request method: " << request.method << "\n";
     if (request.method == HTTP_UNKNOWN)
