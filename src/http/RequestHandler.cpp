@@ -19,17 +19,6 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
 
     int codeInt = static_cast<int>(code);
 
-    // auto it = config.errorPages.find(codeInt);
-    // if (it != config.errorPages.end())
-    // {
-		
-    //     HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
-	// 	errorPage.statusCode = code;
-	// 	return errorPage;
-    // }
-	// std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
-    // std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
-
 	 std::string body =
         "<!DOCTYPE html>"
         "<html>"

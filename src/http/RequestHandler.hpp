@@ -18,8 +18,6 @@ class RequestHandler
 		static HttpResponse	handleGET(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
 		static HttpResponse handlePOST(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
 		static HttpResponse	handleDELETE(const HttpRequest& request, const routeConfig& route, const serverConfig& config);
-		// static HttpResponse buildErrorResponse(HTTP_StatusCode code, const serverConfig& config);
-
 };
 
 #endif

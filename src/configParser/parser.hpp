@@ -36,7 +36,7 @@ struct routeConfig
 	std::string					uploadPath; // where to store uploaded files
 	bool						uploadStoreSet = false;
 
-	size_t 						clientMaxBodySize = 0;
+	size_t 						clientMaxBodySize = 1 * 1024 * 1024;
 	bool   						bodySizeSet = false;
 
 	std::map<std::string, std::string>	cgi;
