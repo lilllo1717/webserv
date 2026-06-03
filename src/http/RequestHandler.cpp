@@ -1,5 +1,16 @@
 #include "RequestHandler.hpp"
 
+static std::string errorPageStyle()
+{
+    return
+    "<style>"
+    "body{margin:0;font-family:Arial;background:#111;color:#eee;"
+    "display:flex;align-items:center;justify-content:center;height:100vh;}"
+    ".box{padding:40px;background:#222;border-radius:10px;text-align:center;}"
+    "h1{color:#ff5555;}"
+    "</style>";
+}
+
 HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serverConfig& config)
 {
     HttpResponse response;
@@ -7,19 +18,6 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
 	(void)config;
 
     int codeInt = static_cast<int>(code);
-
-	// DEBUG OUTPUT
-	// std::cerr << "Looking for error page: " << codeInt << std::endl;
-
-	// for (std::map<int, std::string>::const_iterator it2 = config.errorPages.begin();
-    //  it2 != config.errorPages.end(); ++it2)
-	// {
-    // 	std::cerr << "Configured error page: "
-    //           	<< it2->first
-    //           	<< " -> "
-    //           	<< it2->second
-    //           	<< std::endl;
-	// 
 
     // auto it = config.errorPages.find(codeInt);
     // if (it != config.errorPages.end())
@@ -29,14 +27,26 @@ HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serv
 	// 	errorPage.statusCode = code;
 	// 	return errorPage;
     // }
-	std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
-    std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
+	// std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
+    // std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
+
+	 std::string body =
+        "<!DOCTYPE html>"
+        "<html>"
+        "<head>" + errorPageStyle() + "</head>"
+        "<body>"
+        "<div class='box'>"
+        "<h1>" + std::to_string(codeInt) + " " + std::string(reasonPhrase(code)) + "</h1>"
+        "<p>Something went wrong</p>"
+        "</div>"
+        "</body>"
+        "</html>";
+		
     response.body.assign(body.begin(), body.end());
     response.headers["Content-Type"] = "text/html";
     response.headers["Content-Length"] = std::to_string(response.body.size());
     return response;
 }
-
 
 // Converts URI (filesystem path)
 std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeConfig& route)
