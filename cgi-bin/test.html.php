@@ -6,8 +6,7 @@ header('Content-Type: text/html; charset=UTF-8');
 <head><title>CGI Test</title></head>
 <body>
     <h1>CGI Works! 🎉</h1>
-    <p>POST data: <?php echo htmlspecialchars($_POST['name'] ?? 'none'); ?></p>
-    <img src="/cgi-bin/image.php" alt="Red square">
+    <img src="/cgi-bin/happy_cat.jpeg" alt="CAT">
     <script>console.log('CGI JavaScript works!');</script>
 </body>
 </html>

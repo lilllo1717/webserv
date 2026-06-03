@@ -1,6 +1,6 @@
 CXX             = g++
 RM              = rm -f
-CFLAGS          = -Wall -Wextra -Werror -std=c++17
+CFLAGS          = -Wall -Wextra -Werror -std=c++17 
 INCLUDES        = -I include
 
 SRCS            = src/main.cpp \

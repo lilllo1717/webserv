@@ -1,6 +1,6 @@
 CXX				= c++
 RM				= rm -f
-CXXFLAGS		= -Wall -Wextra -Werror -MMD -MP
+CXXFLAGS		= -Wall -Wextra -Werror -MMD -MP 
 
 SRCS			=	tokenizer.cpp parser.cpp
 					

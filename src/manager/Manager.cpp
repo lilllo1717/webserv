@@ -144,8 +144,10 @@ void Manager::writeCgiBody(size_t& i, Client* client)
     if (bytes_written > 0)
         cgiState->bodyWritten += static_cast<size_t>(bytes_written);
     
-    bool wouldBlock = (bytes_written < 0) && (errno == EAGAIN || errno == EWOULDBLOCK);
-    bool error = (bytes_written == 0) || (bytes_written < 0 && !wouldBlock);
+    // bool wouldBlock = (bytes_written < 0) && (errno == EAGAIN || errno == EWOULDBLOCK);
+    // bool error = (bytes_written == 0) || (bytes_written < 0 && !wouldBlock);
+    bool error = (bytes_written == 0) || (bytes_written < 0);
+
     bool done = (cgiState->bodyWritten >= body.size());
 
     if (error || done)
@@ -173,7 +175,8 @@ void Manager::readCgiOutput(size_t& i, Client* client)
         return;
     }
     
-    bool error = (bytes_read < 0) && (errno != EAGAIN && errno != EWOULDBLOCK);
+    // bool error = (bytes_read < 0) && (errno != EAGAIN && errno != EWOULDBLOCK);
+    bool error = (bytes_read < 0);
     bool done = (bytes_read == 0);
 
     if (error || done)
@@ -260,13 +263,13 @@ void Manager::responseToClient(size_t& i)
         return ;
     }
     ssize_t bytes_sent = send(client_fd, sendBuffer.c_str(), sendBuffer.size(), 0);
-    if (bytes_sent < 0)
+    if (bytes_sent <= 0)
     {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-        {
-            return ;
-        }
-        std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
+        // if (errno == EAGAIN || errno == EWOULDBLOCK)
+        // {
+        //     return ;
+        // }
+        // std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
         cleanupClient(client_fd, i);
         return ;
     }
@@ -349,6 +352,9 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         {
             Server* server = findServerForRequests(listener, request);
             size_t maxBodySize = server->getConfig().clientMaxBodySize;
+            // std::cout << "DEBUG: Request content length: " << request.contentLength ;
+            // std::cout << "DEBUG: Server max body size: "
+            //           << ", max body size: " << maxBodySize << "\n";
             if (maxBodySize > 0 && request.contentLength > maxBodySize)
             {
                 HttpResponse response;
@@ -470,12 +476,12 @@ void Manager::receiveDataFromClient(size_t& i)
     }
     else if (message_size < 0)
     {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-        {
-            // No data available right now, continue
-            return;
-        }
-        std::cerr << "recv error on fd " << client_fd << ": " << strerror(errno) << "\n";
+        // if (errno == EAGAIN || errno == EWOULDBLOCK)
+        // {
+        //     // No data available right now, continue
+        //     return;
+        // }
+        // std::cerr << "recv error on fd " << client_fd << ": " << strerror(errno) << "\n";
         cleanupClient(client_fd, i);
         return;
     }
