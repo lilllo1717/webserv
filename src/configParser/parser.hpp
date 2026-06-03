@@ -2,12 +2,12 @@
 # define PARSER_HPP
 
 # include <algorithm>
+# include <limits>
 # include <map>
 # include <string>
 # include <vector>
 
 # include "tokenizer.hpp"
-
 
 // Specific URL path inside that website
 struct routeConfig 
@@ -52,6 +52,8 @@ struct serverEndpoint
 struct serverConfig
 {
 	serverEndpoint					endpoint; // ip + port to listen on
+	bool							endpointSet = false;
+
 	// std::vector<serverEndpoint>	listen; // IP address of server
 	std::vector<std::string>	serverNames; // list of domains/urls of website
 	std::map<int, std::string>	errorPages; // 404, 400, 500, etc.
@@ -68,7 +70,12 @@ struct mainConfig
 	std::vector<serverConfig> servers;
 };
 
-// create seperate struct for 
+enum class StatusCodeMode
+{
+	Any, // 100-599
+	ErrorPage, // 300-599
+	Redirect, // 301, 302, 303, 307, 308
+};
 
 class Parser
 {
@@ -83,7 +90,7 @@ class Parser
 		const Token&	verifyToken(tokenType tok, const std::string& errorMessage);
 		const Token& 	compareWord(const std::string& word, const std::string& msg);
 	
-		void	throwError(const std::string& message) const;
+		void			throwError(const std::string& message) const;
 
 		// parse client max body size based on suffixes (K, M, G)
 		size_t			convertClientMaxBodySize(const std::string& nb);
@@ -105,8 +112,7 @@ class Parser
 		// parse server block
 		void			isValidPort(int port);
 		void			isValidIP(const std::string& ip);
-
-		void			isValidStatusCode(int code, bool directive);
+		void			isValidStatusCode(int code, StatusCodeMode mode);
 		
 		void			parseListenDirective(serverConfig& sC);
 		void			parseServerNameDirective(serverConfig& sC);
@@ -119,8 +125,6 @@ class Parser
 	public:
 		Parser(): _position(0) {}
 		Parser(const std::vector<Token>& tokens): _tokens(tokens), _position(0) {}
-		// Parser(const Parser& other);
-		// ~Parser();
 
 		mainConfig	parse();
 
