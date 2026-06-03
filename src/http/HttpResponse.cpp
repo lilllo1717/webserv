@@ -27,9 +27,6 @@ std::string getHostName(std::string server_host)
 
 bool matchRouteWithConfig(const std::string& requestUri, const std::string& configUri)
 {
-    std::cout << "requestUri: [" << requestUri << "]\n";
-    std::cout << "configUri: [" << configUri << "]\n";
-
     if (requestUri == configUri)
     {
         std::cout << "path matches" << "\n";
@@ -45,13 +42,13 @@ bool matchRouteWithConfig(const std::string& requestUri, const std::string& conf
         std::cout << "just root uri" << "\n";
         return true;
     }
-    std::cout << "configUri[requestUri.size()]  [" << requestUri[configUri.size()] << "]\n";
+    
     if (requestUri.size() > configUri.size() && requestUri[configUri.size()] == '/')
     {
         std::cout << "match, longer uri" << "\n";
         return true;
     }
-    std::cout << "matchRouteWithConfig returns false" << "\n";
+   
     return false;
 }
 
@@ -72,13 +69,12 @@ std::string methodToString(HTTP_Method method)
 
 std::string extractExtensionFromUri(HttpRequest request)
 {
-    std::cout << "request.uri_path: [" << request.uri_path << "]\n";
     size_t lastSlash = request.uri_path.rfind("/");
     size_t lastDot = request.uri_path.rfind(".");
 
     if (lastDot == std::string::npos || lastDot < lastSlash || lastDot == lastSlash + 1)
         return "";
-     std::cout << "request.uri_path.substr(lastDot) [" << request.uri_path.substr(lastDot) << "]\n";
+
     return request.uri_path.substr(lastDot);
 
 }
@@ -98,39 +94,6 @@ Server* findServerForRequest(const Listener& listener, const HttpRequest& reques
         }
     }
     return listener.defaultServer;
-}
-
-void printRouteInfo(const routeConfig& route)
-{
-    std::cout << "\nDEBUG: Route path: " << route.path << "\n";
-    std::cout << "HTTP Methods: ";
-    for (const std::string& method : route.httpMethods)
-    {
-        std::cout << method << " ";
-    }
-    std::cout << "\n";
-    std::cout << "Root Directory: " << route.rootDir << "\n";
-    std::cout << "Index File: " << route.index << "\n";
-    std::cout << "Autoindex: " << (route.autoindex ? "Enabled" : "Disabled") << "\n";
-    if (route.isRedirect)
-    {
-        std::cout << "Redirect Code: " << route.redirectCode << "\n";
-        std::cout << "Redirect Target: " << route.redirectTarget << "\n";
-    }
-    std::cout << "Allow Upload: " << (route.allow_upload ? "Yes" : "No") << "\n";
-    if (route.allow_upload)
-    {
-        std::cout << "Upload Path: " << route.uploadPath << "\n";
-    }
-    if (!route.cgi.empty())
-    {
-        std::cout << "CGI Configurations:\n";
-        for (const auto& cgiPair : route.cgi)
-        {
-            std::cout << "  Extension: " << cgiPair.first
-                      << ", Interpreter: " << cgiPair.second << "\n";
-        }
-    }
 }
 
 RouterResult Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
@@ -168,7 +131,6 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
         routerResult.response.statusCode = static_cast<HTTP_StatusCode>(404);
         return routerResult;
     }
-    printRouteInfo(*bestMatchRouteConfig);
     std::string methodStringed = methodToString(request.method);
     if (bestMatchRouteConfig->isRedirect == true)
     {
@@ -180,7 +142,6 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
     if (std::find(bestMatchRouteConfig->httpMethods.begin(), bestMatchRouteConfig->httpMethods.end(), methodStringed)
          == bestMatchRouteConfig->httpMethods.end())
     {
-    // std::cout << "no method match." << "\n";
     routerResult.decision = DES_ERROR;
     routerResult.response.statusCode = static_cast<HTTP_StatusCode>(405);
     return routerResult;

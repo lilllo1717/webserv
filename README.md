@@ -159,7 +159,6 @@ You can also test with `curl`
 ### I/O Multiplexing
 
 - [`poll(2)` man page](https://man7.org/linux/man-pages/man2/poll.2.html)
-- [`epoll(7)` man page](https://man7.org/linux/man-pages/man7/epoll.7.html)
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
 
 ### AI Usage
