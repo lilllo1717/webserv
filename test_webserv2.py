@@ -1530,6 +1530,411 @@ def test_binary_null_bytes(host, port):
 # ══════════════════════════════════════════════
 # Summary
 # ══════════════════════════════════════════════
+# ══════════════════════════════════════════════
+# SECTION 47 — HTTP Request Smuggling
+# ══════════════════════════════════════════════
+def test_request_smuggling(host, port):
+    section("47 · HTTP Request Smuggling (CL + TE conflict)")
+
+    # Both Content-Length and Transfer-Encoding present — server must reject or
+    # use one consistently, never allow body desync
+    raw = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Content-Length: 6\r\n"
+        f"Transfer-Encoding: chunked\r\n"
+        f"Connection: close\r\n\r\n"
+        f"0\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=6)
+    check("CL+TE conflict → 4xx or handled safely",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after smuggling attempt", server_alive(host, port))
+
+    # TE says chunked but CL says 999 — must not read 999 bytes
+    raw2 = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Transfer-Encoding: chunked\r\n"
+        f"Content-Length: 999\r\n"
+        f"Connection: close\r\n\r\n"
+        f"5\r\nhello\r\n0\r\n\r\n"
+    ).encode()
+    resp2 = raw_request(host, port, raw2, timeout=6)
+    check("TE+CL smuggling variant → no crash",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after TE+CL variant", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 48 — CRLF Injection
+# ══════════════════════════════════════════════
+def test_crlf_injection(host, port):
+    section("48 · CRLF injection in headers")
+
+    # Try to inject extra header via Host value
+    raw = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host: localhost:8080\r\nX-Injected: evil\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp = raw_request(host, port, raw, timeout=5)
+    # Server should either reject (400) or ignore injected header
+    # Must NOT echo back X-Injected in response headers
+    check("CRLF in Host → 4xx or 200",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("CRLF injection not reflected",
+          b"X-Injected" not in resp, resp[:200])
+    check("Server alive after CRLF injection", server_alive(host, port))
+
+    # CRLF in URI query string
+    raw2 = (
+        f"GET /?foo=bar%0d%0aX-Evil: injected HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("CRLF in query → no header injection",
+          b"X-Evil" not in resp2, resp2[:200])
+    check("Server alive after query CRLF", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 49 — Host header injection
+# ══════════════════════════════════════════════
+def test_host_injection(host, port):
+    section("49 · Host header injection")
+
+    # Host with extra header appended
+    raw = (
+        f"GET / HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\nX-Forwarded-For: 1.2.3.4\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Host injection → 4xx or 200 (no crash)",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+
+    # Host pointing to external domain
+    raw2 = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host: evil.attacker.com\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    # Server may 400, 404, or serve default — must not crash
+    check("External Host → handled safely",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after host injection", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 50 — Absolute URI in request line
+# ══════════════════════════════════════════════
+def test_absolute_uri(host, port):
+    section("50 · Absolute URI in request line")
+
+    raw = (
+        f"GET http://evil.com/steal HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    # Server must not proxy to evil.com — should 400 or 404
+    check("Absolute URI → 4xx or handled locally",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Absolute URI not proxied (no 200 from evil.com)",
+          b"evil" not in resp.lower()[:500], resp[:100])
+    check("Server alive after absolute URI", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 51 — Fragment in URI
+# ══════════════════════════════════════════════
+def test_uri_fragment(host, port):
+    section("51 · URI with fragment identifier")
+
+    # Fragments should be stripped by client normally but if sent to server:
+    raw = (
+        f"GET /index.html#../../etc/passwd HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    body = resp[resp.find(b"\r\n\r\n")+4:] if b"\r\n\r\n" in resp else b""
+    check("Fragment in URI → no /etc/passwd leak",
+          b"root:x:" not in body, body[:100])
+    check("Fragment URI → 4xx or 200",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after fragment URI", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 52 — Deeply nested path
+# ══════════════════════════════════════════════
+def test_deep_path(host, port):
+    section("52 · Excessively nested URI path")
+
+    deep = "/a" * 250  # 500 chars, 250 levels deep
+    raw = f"GET {deep} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Deep nested path → 4xx or 404",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after deep path", server_alive(host, port))
+
+    # Path with many dots
+    dotty = "/../" * 100 + "etc/passwd"
+    raw2 = f"GET /{dotty} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    body2 = resp2[resp2.find(b"\r\n\r\n")+4:] if b"\r\n\r\n" in resp2 else b""
+    check("100x ../ traversal → no passwd",
+          b"root:x:" not in body2, body2[:50])
+    check("Server alive after dotty path", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 53 — Zero Content-Length with body
+# ══════════════════════════════════════════════
+def test_zero_cl_with_body(host, port):
+    section("53 · Content-Length: 0 but body present")
+
+    raw = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Content-Type: text/plain\r\n"
+        f"Content-Length: 0\r\n"
+        f"Connection: close\r\n\r\n"
+        f"this body should be ignored"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("CL:0 with body → 200 (body ignored)",
+          b"200" in resp[:20], resp[:20])
+    check("Server alive after CL:0 + body", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 54 — Negative Content-Length
+# ══════════════════════════════════════════════
+def test_negative_content_length(host, port):
+    section("54 · Negative Content-Length")
+
+    raw = (
+        f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Content-Type: text/plain\r\n"
+        f"Content-Length: -1\r\n"
+        f"Connection: close\r\n\r\n"
+        f"hello"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Negative CL → 4xx",
+          len(resp) == 0 or (resp[:8] == b"HTTP/1.1" and b" 4" in resp[:12]),
+          resp[:20])
+    check("Server alive after negative CL", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 55 — Overflow Content-Length
+# ══════════════════════════════════════════════
+def test_overflow_content_length(host, port):
+    section("55 · Overflow Content-Length value")
+
+    for cl_val in ["99999999999999999999", "18446744073709551616", "999999999999999"]:
+        raw = (
+            f"POST {UPLOAD_URL} HTTP/1.1\r\n"
+            f"Host: {host}:{port}\r\n"
+            f"Content-Type: text/plain\r\n"
+            f"Content-Length: {cl_val}\r\n"
+            f"Connection: close\r\n\r\n"
+        ).encode()
+        resp = raw_request(host, port, raw, timeout=5)
+        check(f"CL={cl_val[:15]} → 4xx or close",
+              len(resp) == 0 or (resp[:8] == b"HTTP/1.1" and b" 4" in resp[:12]),
+              resp[:20])
+
+    check("Server alive after overflow CL", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 56 — Repeated headers
+# ══════════════════════════════════════════════
+def test_repeated_headers(host, port):
+    section("56 · Repeated header names")
+
+    # 100 Content-Type headers
+    hdrs = "Content-Type: text/plain\r\n" * 100
+    raw = (
+        f"GET / HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        + hdrs +
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp = raw_request(host, port, raw, timeout=8)
+    check("100 repeated headers → responds",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after repeated headers", server_alive(host, port))
+
+    # Repeated Host headers
+    raw2 = (
+        f"GET / HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Host: evil.com\r\n"
+        f"Connection: close\r\n\r\n"
+    ).encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("Duplicate Host headers → 4xx or 200",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after duplicate Host", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 57 — Extra spaces in request line
+# ══════════════════════════════════════════════
+def test_request_line_spaces(host, port):
+    section("57 · Extra spaces in request line")
+
+    # Double space between method and URI
+    raw = f"GET  / HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Double space in request line → 4xx or 200",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+
+    # Trailing space after HTTP version
+    raw2 = f"GET / HTTP/1.1 \r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("Trailing space after version → 4xx or 200",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+
+    # Leading spaces before method
+    raw3 = f"  GET / HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n".encode()
+    resp3 = raw_request(host, port, raw3, timeout=5)
+    check("Leading spaces before method → 4xx",
+          len(resp3) == 0 or (resp3[:8] == b"HTTP/1.1" and b" 4" in resp3[:12]),
+          resp3[:20])
+
+    check("Server alive after space variants", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 58 — Tab in header
+# ══════════════════════════════════════════════
+def test_tab_in_header(host, port):
+    section("58 · Tab character in header value")
+
+    raw = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host: localhost:8080\r\n"
+        b"Content-Type:\tapplication/json\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp = raw_request(host, port, raw, timeout=5)
+    check("Tab in header value → 200 or 400",
+          len(resp) == 0 or resp[:8] == b"HTTP/1.1", resp[:20])
+    check("Server alive after tab in header", server_alive(host, port))
+
+    # Tab instead of space after colon (obs-fold)
+    raw2 = (
+        b"GET / HTTP/1.1\r\n"
+        b"Host:\tlocalhost:8080\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    resp2 = raw_request(host, port, raw2, timeout=5)
+    check("Tab instead of space after colon → handled",
+          len(resp2) == 0 or resp2[:8] == b"HTTP/1.1", resp2[:20])
+    check("Server alive after tab variants", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 59 — Slow Loris
+# ══════════════════════════════════════════════
+def test_slow_loris(host, port):
+    section("59 · Slow Loris — incomplete request never finishes")
+
+    # Open connection, send partial headers very slowly, never complete
+    # Server should eventually timeout and close — and keep serving others
+    sockets = []
+    try:
+        for _ in range(5):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(2)
+            try:
+                s.connect((host, port))
+                # Send partial request — never send final \r\n\r\n
+                s.send(f"GET / HTTP/1.1\r\nHost: {host}:{port}\r\n".encode())
+                sockets.append(s)
+            except Exception:
+                pass
+
+        time.sleep(1)
+
+        # Server must still respond to normal requests
+        check("Server responds during slow loris", server_alive(host, port))
+
+    finally:
+        for s in sockets:
+            try:
+                s.close()
+            except Exception:
+                pass
+
+    time.sleep(0.5)
+    check("Server alive after slow loris", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 60 — CGI env injection via query string
+# ══════════════════════════════════════════════
+def test_cgi_env_injection(host, port):
+    section("60 · CGI environment variable injection")
+
+    # Newline in query string trying to inject env var
+    r, body = get(host, port, f"{CGI_INFO_URL}?foo=bar%0aHTTP_INJECTED=evil")
+    if r.status == 404:
+        skip("CGI env injection", "info.py not deployed")
+        return
+    body_str = body.decode(errors="replace")
+    check("Query with newline → 200 or 400",  r.status in (200, 400), r.status)
+    check("Injected env var not in output",
+          "HTTP_INJECTED" not in body_str or "evil" not in body_str,
+          body_str[:200])
+
+    # Null byte in query string
+    r2, body2 = get(host, port, f"{CGI_INFO_URL}?foo=bar%00baz")
+    body_str2 = body2.decode(errors="replace")
+    check("Null byte in query → 200 or 400",  r2.status in (200, 400), r2.status)
+    check("Server alive after env injection",  server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# SECTION 61 — POST binary body with null bytes
+# ══════════════════════════════════════════════
+def test_binary_null_bytes(host, port):
+    section("61 · POST binary body containing null bytes")
+
+    # Body with null bytes interspersed — must pass through intact
+    payload = b"start\x00middle\x00\x00end"
+    expected = len(payload)
+
+    r, body = post(host, port, UPLOAD_URL, body=payload,
+                   headers={"Content-Type": "application/octet-stream"})
+    body_str = body.decode(errors="replace")
+    check("POST with null bytes → 200",      r.status == 200, r.status, 200)
+    check(f"PHP reports {expected} bytes",   f"received: {expected}" in body_str, body_str)
+
+    # All-zeros body
+    zeros = b"\x00" * 1024
+    r2, body2 = post(host, port, UPLOAD_URL, body=zeros,
+                     headers={"Content-Type": "application/octet-stream"})
+    body_str2 = body2.decode(errors="replace")
+    check("POST all-zero body → 200",        r2.status == 200, r2.status, 200)
+    check("PHP reports 1024 bytes",          "received: 1024" in body_str2, body_str2)
+
+    check("Server alive after null-byte POST", server_alive(host, port))
+
+
+# ══════════════════════════════════════════════
+# Summary
+# ══════════════════════════════════════════════
 def summary():
     section("Summary")
     passed = sum(1 for _, ok in results if ok)

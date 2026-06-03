@@ -1,35 +1,47 @@
 #include "RequestHandler.hpp"
 
+static std::string errorPageStyle()
+{
+    return
+    "<style>"
+    "body{margin:0;font-family:Arial;background:#111;color:#eee;"
+    "display:flex;align-items:center;justify-content:center;height:100vh;}"
+    ".box{padding:40px;background:#222;border-radius:10px;text-align:center;}"
+    "h1{color:#ff5555;}"
+    "</style>";
+}
+
 HttpResponse RequestHandler::buildErrorResponse(HTTP_StatusCode code, const serverConfig& config)
 {
     HttpResponse response;
     response.statusCode = code;
+	(void)config;
 
     int codeInt = static_cast<int>(code);
 
-	// DEBUG OUTPUT
-	// std::cerr << "Looking for error page: " << codeInt << std::endl;
-
-	// for (std::map<int, std::string>::const_iterator it2 = config.errorPages.begin();
-    //  it2 != config.errorPages.end(); ++it2)
-	// {
-    // 	std::cerr << "Configured error page: "
-    //           	<< it2->first
-    //           	<< " -> "
-    //           	<< it2->second
-    //           	<< std::endl;
-	// 
-
-    auto it = config.errorPages.find(codeInt);
-    if (it != config.errorPages.end())
-    {
+    // auto it = config.errorPages.find(codeInt);
+    // if (it != config.errorPages.end())
+    // {
 		
-        HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
-		errorPage.statusCode = code;
-		return errorPage;
-    }
-	std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
-    std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
+    //     HttpResponse errorPage =  RequestHandler::serveStaticFile(it->second);
+	// 	errorPage.statusCode = code;
+	// 	return errorPage;
+    // }
+	// std::string phrase = std::to_string(codeInt) + " " + std::string(reasonPhrase(code));
+    // std::string body = "<html><body><h1>" + phrase + "</h1></body></html>";
+
+	 std::string body =
+        "<!DOCTYPE html>"
+        "<html>"
+        "<head>" + errorPageStyle() + "</head>"
+        "<body>"
+        "<div class='box'>"
+        "<h1>" + std::to_string(codeInt) + " " + std::string(reasonPhrase(code)) + "</h1>"
+        "<p>Something went wrong</p>"
+        "</div>"
+        "</body>"
+        "</html>";
+		
     response.body.assign(body.begin(), body.end());
     response.headers["Content-Type"] = "text/html";
     response.headers["Content-Length"] = std::to_string(response.body.size());
@@ -43,12 +55,26 @@ std::string	RequestHandler::resolvePath(const HttpRequest& request, const routeC
 
     // Remove location prefix
     if (relative.find(route.path) == 0)
-        relative = relative.substr(route.path.length());
+		relative = relative.substr(route.path.length());
+	
+	// Remove leading /
+	if (!relative.empty() && relative[0] == '/')
+		relative.erase(0, 1);
+		
+	std::filesystem::path root = std::filesystem::weakly_canonical(route.rootDir);
+	std::filesystem::path requested = std::filesystem::weakly_canonical(root / relative);
 
-    if (relative.empty() || relative== "/")
-        return route.rootDir;
+	std::string rootStr = root.string();
+	std::string requestedStr = requested.string();
 
-    return route.rootDir + "/" + relative;
+	// Checks does not go beyond root
+	if (requestedStr.find(rootStr) != 0)
+	{
+		std::cout << "Directory traversale attempt blocked\n";
+		return "";
+	}
+
+	return requestedStr;
 }
 
 // Check if path is a directory
@@ -185,6 +211,12 @@ HttpResponse	RequestHandler::handleGET(const HttpRequest& request, const routeCo
 	HttpResponse response;
 	std::string path = resolvePath(request, route);
 
+	if (path.empty())
+	{
+    	response.statusCode = static_cast<HTTP_StatusCode>(403);
+    	return buildErrorResponse(response.statusCode, config);
+	}
+
 	if (isDirectory(path))
 	{
 		std::string indexPath = resolveIndexFile(path, route);
@@ -263,24 +295,19 @@ HttpResponse	RequestHandler::handleDELETE(const HttpRequest& request, const rout
 	HttpResponse	response;
 	std::string		path = resolvePath(request, route);
 
-	// Allow DELETE in upload directory
-	// if (route.rootDir != "./uploads")
-	// {
-    // 	response.statusCode = static_cast<HTTP_StatusCode>(403);
-   	// 	return constructResponse(response);
-	// }
+	if (path.empty())
+	{
+    	response.statusCode = static_cast<HTTP_StatusCode>(403);
+    	return buildErrorResponse(response.statusCode, config);
+	}
 
 	struct stat	s;
 	if (stat(path.c_str(), &s) != 0)
 	{
-		// response.statusCode = static_cast<HTTP_StatusCode>(404);
-		// return constructResponse(response);
 		return buildErrorResponse(static_cast<HTTP_StatusCode>(404), config);
 	}
 	if (S_ISDIR(s.st_mode))
 	{
-		// response.statusCode = static_cast<HTTP_StatusCode>(403);
-		// return constructResponse(response);
 		return buildErrorResponse(static_cast<HTTP_StatusCode>(403), config);
 	}
 	if (remove(path.c_str()) != 0)

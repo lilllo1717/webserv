@@ -35,8 +35,6 @@ class Tokenizer
 		size_t		_idx;
 		int			_line;
 		int			_col;
-
-		// std::string		readFile(const std::string& path);
 		
 		char	currentPosition() const;
 		bool	isEOF();
@@ -47,11 +45,7 @@ class Tokenizer
 		Token	readQuotedWord();
 
 	public:
-		// Orthodox canonical form
-		Tokenizer(std::string& input);
-		// Tokenizer(const Tokenizer& other);
-		Tokenizer&	operator=(const Tokenizer& other);
-		// ~Tokenizer();
+		Tokenizer(std::string& input): _src(input), _idx(0), _line(1), _col(1) {}
 
 		Token	createToken();
 };

@@ -73,7 +73,12 @@ size_t	Parser::convertClientMaxBodySize(const std::string& nb)
 	size_t	j = 0;
 	while (j < i)
 	{
-		convertedNb = convertedNb * 10 + (nb[j] - '0');
+		int digit = nb[j] - '0';
+
+		if (convertedNb > (std::numeric_limits<size_t>::max() - digit) / 10)
+			throw std::runtime_error("Body size overflow");
+
+		convertedNb = convertedNb * 10 + digit;
 		j++;
 	}
 	if (i == nb.size())
@@ -82,12 +87,19 @@ size_t	Parser::convertClientMaxBodySize(const std::string& nb)
 		throw std::runtime_error("Invalid suffix format");
 	
 	char	suffix = nb[i];
+	size_t	multiplier = 1;
+
 	if (suffix == 'K')
-		return convertedNb * 1024;
+		multiplier = 1024ULL;
 	if (suffix == 'M')
-		return convertedNb * 1024 * 1024;
+		multiplier = 1024ULL * 1024ULL;
 	if (suffix == 'G')
-		return convertedNb * 1024 * 1024 * 1024;
+		multiplier = 1024ULL * 1024ULL * 1024ULL;
+	
+	if (convertedNb > std::numeric_limits<size_t>::max() / multiplier)
+		throw std::runtime_error("Body size overflow");
+	
+	return convertedNb * multiplier;
 	
 	throw std::runtime_error("Unknown suffix specified");
 }
@@ -219,23 +231,51 @@ void	Parser::parseCGIDirective(routeConfig& rC)
 	std::string executable = currentPosition().value;
 	moveForward();
 
+	if (rC.cgi.find(extension) != rC.cgi.end())
+		throwError("Duplicate CGI extension: " + extension);
+
 	rC.cgi[extension] = executable;
 
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after cgi values");
 }
 
-void	Parser::isValidStatusCode(int code, bool directive)
+void	Parser::isValidStatusCode(int code, StatusCodeMode mode)
 {
-	if (directive)
+	if (code < 100 || code > 599)
+		throwError("Invalid HTTP status code");
+	
+	if (mode == StatusCodeMode::Any)
+		return;
+	
+	if (mode == StatusCodeMode::ErrorPage)
 	{
-		if (code < 100 || code > 599)
-			throwError("Invalid HTTP status code");
-	}
-	else
-	{
-		if (code < 300 || code > 599)
+		if (code < 300)
 			throwError("Invalid error_page status code");
+		return;
 	}
+
+	if (mode == StatusCodeMode::Redirect)
+	{
+		if (code != 301 && code != 302 && code != 303 && code != 307 && code != 308)
+			throwError("Invalid redirect status code");
+	}
+}
+
+static bool isValidRedirectTarget(const std::string& target)
+{
+	if (target.empty())
+		return false;
+
+	if (target[0] == '/')
+		return true;
+
+	if (target.compare(0, 7, "http://") == 0)
+		return true;
+
+	if (target.compare(0, 8, "http://") == 0)
+		return true;
+	
+	return false;
 }
 
 void	Parser::parseReturnDirective(routeConfig& rC)
@@ -253,14 +293,39 @@ void	Parser::parseReturnDirective(routeConfig& rC)
 
 	const std::string& value = currentPosition().value;
 	int code = std::stoi(value);
-	isValidStatusCode(code, true);
+	isValidStatusCode(code, StatusCodeMode::Redirect);
 
 	rC.redirectCode = code;
 	moveForward();
 
 	const Token&	redirectPath = verifyToken(tokenType::TOKEN_WORD, "Expected redirect target after error code");
+
+	if (!isValidRedirectTarget(redirectPath.value))
+		throwError("Redirect target must be a path or URL");
+	
 	rC.redirectTarget = redirectPath.value;
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after return value");
+}
+
+void	Parser::parseBodySizeDirective(routeConfig& sC)
+{
+	if (sC.bodySizeSet)
+		throwError("Duplicate client_max_body_size directive");
+	
+	sC.bodySizeSet = true;
+
+	const Token&	bodySize = verifyToken(tokenType::TOKEN_WORD, "Expected number size after 'client_max_body_size' directive");
+	
+	try
+	{
+		sC.clientMaxBodySize = convertClientMaxBodySize(bodySize.value);
+	}
+	catch(const std::exception& e)
+	{
+		throwError("Invalid client_max_body_size value");
+	}
+	
+	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after client_max_body_size value");
 }
 
 void	Parser::parseInsideLocationBlock(routeConfig& rC)
@@ -278,6 +343,8 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 		parseAutoindexDirective(rC);
 	else if (name == "upload_store")
 		parseUploadStoreDirective(rC);
+	else if (name == "client_max_body_size")
+		parseBodySizeDirective(rC);
 	else if (name == "cgi")
 		parseCGIDirective(rC);
 	else if (name == "return")
@@ -286,11 +353,30 @@ void	Parser::parseInsideLocationBlock(routeConfig& rC)
 		throwError("Unknown directive in location block: " + name);
 }
 
+static bool isValidLocationPath(const std::string& path)
+{
+	if (path.empty())
+		return false;
+
+	if (path[0] != '/')
+		return false;
+	
+	for (size_t i = 1; i < path.size(); i++)
+	{
+		if (path[i] == '/' && path[i - 1] == '/')
+			return false;
+	}
+	return true;
+}
+
 routeConfig	Parser::parseLocationBlock()
 {
 	routeConfig	rC;
 	const Token& token = verifyToken(tokenType::TOKEN_WORD, "Expected location path after 'location' directive");
 	rC.path = token.value;
+
+	if (!isValidLocationPath(token.value))
+		throwError("Invalid location path");
 
 	verifyToken(tokenType::TOKEN_LBRACE, "Expected '{' after location path");
 
@@ -341,7 +427,7 @@ void	Parser::parseListenDirective(serverConfig& sC)
 
 	std::string	value = address.value;
 
-	std::string host = "0.0.0.0";
+	std::string host = "127.0.0.1";
 	int port;
 
 	size_t	colon = value.find(':');
@@ -372,10 +458,10 @@ void	Parser::parseListenDirective(serverConfig& sC)
 	if (sC.endpoint.ip == host && sC.endpoint.port == port)
 		throwError("Duplicate listen values");	
 	
-	// sC.listen.push_back(serverEndpoint{host, port});
-
 	sC.endpoint.ip = host;
 	sC.endpoint.port = port;
+
+	sC.endpointSet = true;
 }
 
 static bool	isValidServerName(const std::string& name)
@@ -383,13 +469,6 @@ static bool	isValidServerName(const std::string& name)
 	if (name.empty())
 		return false;
 
-	// size_t	start = 0;
-
-	// if (start == name.size())
-	// 	return false;
-	
-	// if (name[start] == '.' || name.back() == '.')
-	// 	return false;
 	if (name.front() == '.' || name.back() == '.')
 		return false;
 	
@@ -456,7 +535,7 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 		if (value.empty() || !std::all_of(value.begin(), value.end(), ::isdigit))
 			break;
 		int code = std::stoi(value);
-		isValidStatusCode(code, false);
+		isValidStatusCode(code, StatusCodeMode::ErrorPage);
 		errorCodes.push_back(code);
 
 		moveForward();
@@ -468,7 +547,12 @@ void	Parser::parseErrorPageDirective(serverConfig& sC)
 	const Token&	path = verifyToken(tokenType::TOKEN_WORD, "Expected path after error code");
 	verifyToken(tokenType::TOKEN_SEMICOLON, "Expected ';' after error_page values");
 	for (size_t i = 0; i < errorCodes.size(); i++)
+	{
+		if (sC.errorPages.find(errorCodes[i]) != sC.errorPages.end())
+			throwError("Duplicate error_page directive");
+
 		sC.errorPages[errorCodes[i]] = path.value;
+	}	
 }
 
 void	Parser::parseInsideServerBlock(serverConfig& sC)
@@ -478,7 +562,15 @@ void	Parser::parseInsideServerBlock(serverConfig& sC)
 
 	if (name == "location")
 	{
-		sC.routes.push_back(parseLocationBlock());
+		routeConfig route = parseLocationBlock();
+
+		for (size_t i = 0; i < sC.routes.size(); i++)
+		{
+			if (sC.routes[i].path == route.path)
+				throwError("Duplicate location path: " + route.path);
+		}
+
+		sC.routes.push_back(route);
 		return;
 	}
 	else if (name == "listen")
@@ -504,6 +596,9 @@ serverConfig Parser::parseServerBlock()
         parseInsideServerBlock(sC);
 
     verifyToken(tokenType::TOKEN_RBRACE, "Expected '}' to close server block");
+	if (!sC.endpointSet)
+		throwError("Server block requires at least one listen directive");
+
     return sC;
 }
 
@@ -556,6 +651,7 @@ mainConfig	Parser::parse()
 //         Tokenizer tokenizer(configText);
 
 //         // test token output
+
 // 		std::vector<Token>	tokens;
 //         Token token;
 //         do

@@ -12,13 +12,11 @@ std::string	readFile(const std::string& path)
     return buffer.str();
 }
 
-Tokenizer::Tokenizer(std::string& input): _src(input), _idx(0), _line(1), _col(1) {}
-
 char	Tokenizer::currentPosition() const
 {
 	if (_idx >= _src.size())
 		return '\0';
-	return (_src[_idx]);
+	return _src[_idx];
 }
 
 bool	Tokenizer::isEOF()
@@ -51,9 +49,9 @@ void	Tokenizer::skipWhitespaceAndComments()
 		{
 			while(!isEOF() && currentPosition() != '\n')
 				moveForward();
-			continue ;
+			continue;
 		}
-		break ;
+		break;
 	}
 }
 
@@ -99,28 +97,27 @@ Token	Tokenizer::readQuotedWord()
 		{
 			moveForward();
 			if (isEOF())
-				break ;
+				break;
 			
 			char e = currentPosition();
-			// out.push_back('\t');
-			// break ;
+	
 			switch (e)
 			{
 				case '"':
 					out.push_back('"');
-					break ;
+					break;
 				case '\\':
 					out.push_back('\\');
-					break ;
+					break;
 				case '\n':
 					out.push_back('\n');
-					break ;
+					break;
 				case '\t':
 					out.push_back('\t');
-					break ;
+					break;
 				default:
 					out.push_back(e);
-					break ;
+					break;
 			}
 			moveForward();
 		}
@@ -146,7 +143,7 @@ Token	Tokenizer::createToken()
 	const int	startCol = _col;
 
 	if (isEOF())
-		return (Token(tokenType::TOKEN_EOF, "", startLine, startCol));
+		return Token(tokenType::TOKEN_EOF, "", startLine, startCol);
 
 	char c = currentPosition();
 
