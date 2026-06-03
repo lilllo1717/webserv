@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>webserv / tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161d;
+    --bg3: #1a1e28;
+    --bg4: #222738;
+    --border: #2a2f42;
+    --border2: #363d56;
+    --text: #e8eaf2;
+    --text2: #8892b0;
+    --text3: #4a5270;
+    --green: #4af0a0;
+    --green2: #1a4a35;
+    --blue: #5b9cf6;
+    --blue2: #162040;
+    --red: #f06b6b;
+    --red2: #3a1515;
+    --amber: #f0b84a;
+    --amber2: #3a2a0a;
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 60px; }
+
+  /* header */
+  header {
+    padding: 28px 0 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .logo {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .logo em { color: var(--green); font-style: normal; }
+  .logo-sub { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.12em; margin-top: 2px; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .config-row { display: flex; align-items: center; gap: 8px; }
+  .config-label { font-size: 11px; color: var(--text3); letter-spacing: 0.08em; }
+  .config-input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .config-input:focus { border-color: var(--green); }
+  #portInput { width: 64px; }
+  #hostInput { width: 160px; }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+  /* panel */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg3);
+  }
+  .panel-title { font-size: 11px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .panel-body { padding: 18px; }
+
+  /* method pill */
+  .method-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .pill-get { background: var(--green2); color: var(--green); }
+  .pill-post { background: var(--blue2); color: var(--blue); }
+  .pill-delete { background: var(--red2); color: var(--red); }
+  .pill-other { background: var(--amber2); color: var(--amber); }
+
+  /* url bar */
+  .url-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  select#method {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    min-width: 90px;
+    transition: border-color 0.15s;
+  }
+  select#method:focus { border-color: var(--green); }
+  input#urlPath {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input#urlPath:focus { border-color: var(--blue); }
+
+  .send-btn {
+    background: var(--green);
+    color: #0a1a0f;
+    border: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .send-btn:hover { background: #6fffc0; transform: translateY(-1px); }
+  .send-btn:active { transform: scale(0.97); }
+  .send-btn.loading { opacity: 0.6; pointer-events: none; }
+
+  /* field */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; color: var(--text3); letter-spacing: 0.08em; margin-bottom: 5px; }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--blue); }
+  .field textarea { height: 90px; resize: vertical; line-height: 1.5; }
+
+  /* body toggle */
+  .body-section { margin-top: 4px; }
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .toggle-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active { background: var(--bg4); border-color: var(--border2); color: var(--text); }
+  .toggle-btn:hover { color: var(--text); }
+
+  /* presets */
+  .presets-section { margin-bottom: 20px; }
+  .presets-label { font-size: 11px; color: var(--text3); letter-spacing: 0.08em; margin-bottom: 8px; }
+  .presets-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preset-btn:hover { border-color: var(--border2); color: var(--text); background: var(--bg4); }
+  .preset-btn .pm { font-size: 10px; font-weight: 600; }
+  .pm-g { color: var(--green); }
+  .pm-p { color: var(--blue); }
+  .pm-d { color: var(--red); }
+
+  /* response */
+  .response-area {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    min-height: 200px;
+    overflow: hidden;
+  }
+  .resp-status-bar {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    background: var(--bg3);
+  }
+  .resp-code {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 5px;
+  }
+  .code-2xx { background: var(--green2); color: var(--green); }
+  .code-3xx { background: var(--amber2); color: var(--amber); }
+  .code-4xx { background: var(--red2); color: var(--red); }
+  .code-5xx { background: var(--red2); color: var(--red); }
+  .resp-ms { color: var(--text3); font-size: 11px; margin-left: auto; }
+  .resp-headers { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text3); line-height: 1.7; }
+  .resp-headers span { color: var(--text2); }
+  .resp-body { padding: 14px; font-size: 12px; color: var(--text); line-height: 1.6; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+  .resp-placeholder { padding: 40px 20px; text-align: center; font-size: 12px; color: var(--text3); }
+  .resp-err { padding: 16px; font-size: 12px; color: var(--red); line-height: 1.6; }
+
+  /* history */
+  .history-panel { grid-column: 1 / -1; }
+  .history-list { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+  .hist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .hist-item:hover { background: var(--bg3); border-color: var(--border); }
+  .hist-method { font-size: 11px; font-weight: 600; min-width: 52px; }
+  .hist-url { font-size: 12px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-code { font-size: 12px; font-weight: 500; min-width: 36px; }
+  .hist-ms { font-size: 11px; color: var(--text3); min-width: 52px; text-align: right; }
+  .hist-time { font-size: 11px; color: var(--text3); min-width: 72px; text-align: right; }
+  .no-history { padding: 30px; text-align: center; font-size: 12px; color: var(--text3); }
+
+  .hc-2xx { color: var(--green); }
+  .hc-3xx { color: var(--amber); }
+  .hc-4xx { color: var(--red); }
+  .hc-err { color: var(--red); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* animations */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .anim { animation: fadeIn 0.2s ease; }
+
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  input[type="file"] {
+    background: var(--bg3);
+    border: 1px dashed var(--border2);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  .clear-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.12s;
+  }
+  .clear-btn:hover { color: var(--red); border-color: var(--red2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="logo">web<em>serv</em> <span style="color:var(--text3);font-weight:400;">/</span> tester</div>
+      <div class="logo-sub">HTTP REQUEST FORGE · C++98 SERVER</div>
+    </div>
+    <div class="live-dot"></div>
+    <div class="header-right">
+      <div class="config-row">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="relativeToggle" checked onchange="onRelativeToggle()" style="accent-color:var(--green);width:14px;height:14px;">
+          <span class="config-label">RELATIVE</span>
+        </label>
+        <span class="config-label" style="margin-left:8px;opacity:0.4;" id="hostLabel">HOST</span>
+        <input class="config-input" id="hostInput" value="http://127.0.0.1" disabled style="opacity:0.4;">
+        <span class="config-label" style="opacity:0.4;" id="portLabel">PORT</span>
+        <input class="config-input" id="portInput" value="8080" disabled style="opacity:0.4;">
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: Request builder -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">request builder</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="presets-section">
+          <div class="presets-label">QUICK PRESETS</div>
+          <div class="presets-grid">
+            <button class="preset-btn" onclick="preset('GET','/')"><span class="pm pm-g">GET</span> /</button>
+            <button class="preset-btn" onclick="preset('GET','/uploads/')"><span class="pm pm-g">GET</span> /uploads/</button>
+            <button class="preset-btn" onclick="preset('GET','/testAutoindex/')"><span class="pm pm-g">GET</span> /testAutoindex/</button>
+            <button class="preset-btn" onclick="preset('GET','/cgi-bin/hello.php')"><span class="pm pm-g">GET</span> hello.php</button>
+            <button class="preset-btn" onclick="preset('GET','/cgi-bin/worldclock.py')"><span class="pm pm-g">GET</span> worldclock.py</button>
+            <button class="preset-btn" onclick="preset('GET','/cgi-bin/info.py')"><span class="pm pm-g">GET</span> info.py</button>
+            <button class="preset-btn" onclick="preset('POST','/upload')"><span class="pm pm-p">POST</span> /upload</button>
+            <button class="preset-btn" onclick="preset('DELETE','/uploads/upload.txt')"><span class="pm pm-d">DELETE</span> upload.txt</button>
+            <button class="preset-btn" onclick="preset('GET','/this-does-not-exist')"><span class="pm pm-g">GET</span> 404</button>
+            <button class="preset-btn" onclick="preset('GET','/upload')"><span class="pm pm-g">GET</span> 405</button>
+            <button class="preset-btn" onclick="preset('FOOBAR','/')"><span class="pm" style="color:var(--amber)">???</span> unknown</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="url-bar">
+          <select id="method" onchange="onMethodChange()">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="DELETE">DELETE</option>
+            <option value="FOOBAR">FOOBAR</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+          </select>
+          <input id="urlPath" value="/" placeholder="/path">
+          <button class="send-btn" id="sendBtn" onclick="sendRequest()">&#9654; send</button>
+        </div>
+
+        <div class="field">
+          <label>HOST HEADER (optional — for virtual hosting)</label>
+          <input id="hostHeader" placeholder="e.g. example.com or other.com">
+        </div>
+
+        <div id="bodySection" style="display:none;">
+          <div class="divider"></div>
+          <div class="toggle-row">
+            <button class="toggle-btn active" id="btnText" onclick="setBodyMode('text')">text body</button>
+            <button class="toggle-btn" id="btnFile" onclick="setBodyMode('file')">file upload</button>
+          </div>
+          <div id="textMode">
+            <div class="field">
+              <label>CONTENT-TYPE</label>
+              <input id="contentType" value="text/plain">
+            </div>
+            <div class="field">
+              <label>BODY</label>
+              <textarea id="bodyText" placeholder="request body..."></textarea>
+            </div>
+          </div>
+          <div id="fileMode" style="display:none;">
+            <div class="field">
+              <label>FILE TO UPLOAD</label>
+              <input type="file" id="fileInput">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: Response -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">response</span>
+        <button class="clear-btn" onclick="clearResponse()">clear</button>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div class="response-area" id="responseArea">
+          <div class="resp-placeholder">&#x25B6; send a request to see the response</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM: History -->
+    <div class="panel history-panel">
+      <div class="panel-header">
+        <span class="panel-title">request history</span>
+        <button class="clear-btn" onclick="clearHistory()">clear all</button>
+      </div>
+      <div class="panel-body" style="padding: 10px 14px;">
+        <div class="history-list" id="historyList">
+          <div class="no-history">no requests yet — fire one above</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let reqHistory = [];
+let bodyMode = 'text';
+
+function onMethodChange() {
+  const m = document.getElementById('method').value;
+  document.getElementById('bodySection').style.display = m === 'POST' ? 'block' : 'none';
+}
+
+function setBodyMode(mode) {
+  bodyMode = mode;
+  document.getElementById('textMode').style.display = mode === 'text' ? 'block' : 'none';
+  document.getElementById('fileMode').style.display = mode === 'file' ? 'block' : 'none';
+  document.getElementById('btnText').className = 'toggle-btn' + (mode === 'text' ? ' active' : '');
+  document.getElementById('btnFile').className = 'toggle-btn' + (mode === 'file' ? ' active' : '');
+  if (mode === 'file') document.getElementById('contentType').value = 'application/octet-stream';
+  else document.getElementById('contentType').value = 'text/plain';
+}
+
+function preset(method, path) {
+  document.getElementById('method').value = method;
+  document.getElementById('urlPath').value = path;
+  onMethodChange();
+}
+
+function onRelativeToggle() {
+  const rel = document.getElementById('relativeToggle').checked;
+  const hostEl = document.getElementById('hostInput');
+  const portEl = document.getElementById('portInput');
+  const hostLabel = document.getElementById('hostLabel');
+  const portLabel = document.getElementById('portLabel');
+  hostEl.disabled = rel; portEl.disabled = rel;
+  const op = rel ? '0.4' : '1';
+  hostEl.style.opacity = op; portEl.style.opacity = op;
+  if (hostLabel) hostLabel.style.opacity = op;
+  if (portLabel) portLabel.style.opacity = op;
+}
+
+function getBaseUrl() {
+  const useRelative = document.getElementById('relativeToggle').checked;
+  if (useRelative) return '';
+  const host = document.getElementById('hostInput').value.replace(/\/$/, '');
+  const port = document.getElementById('portInput').value;
+  return host + ':' + port;
+}
+
+async function sendRequest() {
+  const method = document.getElementById('method').value;
+  const path = document.getElementById('urlPath').value || '/';
+  const url = getBaseUrl() + path;
+  const hostHeader = document.getElementById('hostHeader').value.trim();
+  const btn = document.getElementById('sendBtn');
+
+  btn.textContent = '... sending';
+  btn.classList.add('loading');
+
+  const opts = { method, headers: {} };
+  if (hostHeader) opts.headers['Host'] = hostHeader;
+
+  if (method === 'POST') {
+    if (bodyMode === 'file') {
+      const file = document.getElementById('fileInput').files[0];
+      if (file) {
+        opts.body = file;
+        opts.headers['Content-Type'] = file.type || 'application/octet-stream';
+      }
+    } else {
+      const body = document.getElementById('bodyText').value;
+      opts.body = body;
+      opts.headers['Content-Type'] = document.getElementById('contentType').value;
+    }
+  }
+
+  const t0 = performance.now();
+
+  try {
+    const resp = await fetch(url, opts);
+    const elapsed = Math.round(performance.now() - t0);
+    const status = resp.status;
+    const statusText = resp.statusText;
+    const headers = {};
+    resp.headers.forEach((v, k) => headers[k] = v);
+    const body = await resp.text();
+
+    renderResponse(status, statusText, headers, body, elapsed);
+    addHistory(method, path, status, elapsed);
+  } catch(e) {
+    const elapsed = Math.round(performance.now() - t0);
+    renderError(e.message, elapsed);
+    addHistory(method, path, 0, elapsed);
+  } finally {
+    btn.textContent = '▶ send';
+    btn.classList.remove('loading');
+  }
+}
+
+function statusClass(code) {
+  if (code >= 500) return 'code-5xx';
+  if (code >= 400) return 'code-4xx';
+  if (code >= 300) return 'code-3xx';
+  if (code >= 200) return 'code-2xx';
+  return 'code-4xx';
+}
+
+function histClass(code) {
+  if (code === 0) return 'hc-err';
+  if (code >= 400) return 'hc-4xx';
+  if (code >= 300) return 'hc-3xx';
+  if (code >= 200) return 'hc-2xx';
+  return 'hc-err';
+}
+
+function renderResponse(code, statusText, headers, body, elapsed) {
+  const area = document.getElementById('responseArea');
+  const headerLines = Object.entries(headers)
+    .map(([k,v]) => `<span style="color:var(--blue)">${escHtml(k)}</span>: ${escHtml(v)}`)
+    .join('\n');
+  const display = body.length > 3000 ? body.slice(0, 3000) + '\n... (truncated)' : body;
+  area.className = 'response-area anim';
+  area.innerHTML = `
+    <div class="resp-status-bar">
+      <span class="resp-code ${statusClass(code)}">${code} ${escHtml(statusText)}</span>
+      <span style="font-size:12px;color:var(--text2);">${Object.keys(headers).length} headers</span>
+      <span class="resp-ms">${elapsed}ms</span>
+    </div>
+    <div class="resp-headers">${headerLines}</div>
+    <div class="resp-body">${escHtml(display)}</div>`;
+}
+
+function renderError(msg, elapsed) {
+  const area = document.getElementById('responseArea');
+  area.className = 'response-area anim';
+  area.innerHTML = `
+    <div class="resp-status-bar">
+      <span class="resp-code code-4xx">network error</span>
+      <span class="resp-ms">${elapsed}ms</span>
+    </div>
+    <div class="resp-err">${escHtml(msg)}\n\nNote: browsers block cross-origin requests via CORS.\nOpen this file via your webserv (place it in ./www/) or\nrun a local proxy. Curl is always reliable for testing.</div>`;
+}
+
+function clearResponse() {
+  document.getElementById('responseArea').innerHTML = '<div class="resp-placeholder">&#x25B6; send a request to see the response</div>';
+}
+
+function addHistory(method, path, status, elapsed) {
+  reqHistory.unshift({ method, path, status, elapsed, time: new Date().toLocaleTimeString() });
+  if (reqHistory.length > 100) reqHistory.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!reqHistory.length) {
+    list.innerHTML = '<div class="no-history">no requests yet — fire one above</div>';
+    return;
+  }
+  const methodColor = m => m === 'GET' ? 'var(--green)' : m === 'POST' ? 'var(--blue)' : m === 'DELETE' ? 'var(--red)' : 'var(--amber)';
+  list.innerHTML = reqHistory.map((h, i) => {
+    const sc = h.status === 0 ? 'ERR' : h.status;
+    const hc = histClass(h.status);
+    return `<div class="hist-item" onclick="replayItem(${i})">
+      <span class="hist-method" style="color:${methodColor(h.method)}">${h.method}</span>
+      <span class="hist-url">${escHtml(h.path)}</span>
+      <span class="hist-code ${hc}">${sc}</span>
+      <span class="hist-ms">${h.elapsed}ms</span>
+      <span class="hist-time">${h.time}</span>
+    </div>`;
+  }).join('');
+}
+
+function replayItem(i) {
+  const h = reqHistory[i];
+  document.getElementById('method').value = h.method;
+  document.getElementById('urlPath').value = h.path;
+  onMethodChange();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearHistory() {
+  reqHistory = [];
+  renderHistory();
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

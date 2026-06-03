@@ -33,7 +33,6 @@ ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer, HttpReques
     {
         return PARSE_ERROR;
     }
-    // buffer.erase(0, col_pos + 1);
     std::string headers_key = buffer.substr(0, col_pos);
     std::string headers_val = buffer.substr(col_pos + 1);
     trim(headers_key);
@@ -50,7 +49,6 @@ ParseResult HttpRequestParser::parseSingleHeader(std::string &buffer, HttpReques
         request.keepAlive = (val.find("keep-alive") != std::string::npos);
     }
     request.headers[headers_key] = headers_val;
-    std::cout << "!![" << headers_key << "]" << ":" << headers_val << "\n";
     return PARSE_DONE;
 }
 
@@ -67,7 +65,6 @@ ParseResult HttpRequestParser::parseHeader(HttpRequest& request)
             return PARSE_DONE;
         }
         std::string string_to_check = request.buffer.substr(0, pos);
-        // std::cout << "string_to_check: " << string_to_check << "\n";
         if (parseSingleHeader(string_to_check, request) == PARSE_ERROR)
             return PARSE_ERROR;
         request.buffer.erase(0, pos + 2);

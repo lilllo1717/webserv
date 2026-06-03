@@ -105,6 +105,9 @@ void CgiHandler::buildEnvVars()
     std::string pathInfo    = (scriptEnd != std::string::npos) ? scriptAndExtra.substr(scriptEnd) : "";
 
     _scriptPath = _config.rootDir + scriptOnly;
+    char resolved[PATH_MAX];
+    if (realpath(_scriptPath.c_str(), resolved) != nullptr)
+        _scriptPath = resolved;
 
     _envStrings.push_back("REQUEST_METHOD="    + _configResult.stringifiedMethod);
     _envStrings.push_back("CONTENT_LENGTH="    + std::to_string(_request.contentLength));

@@ -101,10 +101,7 @@ bool    startListeners(std::vector<Listener>& listeners)
             closeListenSockets(listeners);
             return false;
         }
-        // _bytesReceived = 0;
-        // _bytesSent = 0;
 
-        // std::cout << "Server started on " << _hostAddress << ":" << _listenPort << "\n";
         std::cout << "Listening on " << lis.endpoint.ip << ":" << lis.endpoint.port
                     << " fd=" << lis.listenFd << "\n";
     }

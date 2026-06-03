@@ -265,11 +265,6 @@ void Manager::responseToClient(size_t& i)
     ssize_t bytes_sent = send(client_fd, sendBuffer.c_str(), sendBuffer.size(), 0);
     if (bytes_sent <= 0)
     {
-        // if (errno == EAGAIN || errno == EWOULDBLOCK)
-        // {
-        //     return ;
-        // }
-        // std::cerr << "send error on fd " << client_fd << ": " << strerror(errno) << "\n";
         cleanupClient(client_fd, i);
         return ;
     }
@@ -284,8 +279,6 @@ void Manager::responseToClient(size_t& i)
     if (keepAlive)
     {
         std::string leftover = client->getHttpRequest().buffer;
-        // std::cout << "DEBUG keepAlive leftover size: " << leftover.size() 
-        //         << " [" << leftover.substr(0, 50) << "]\n";
         client->getHttpRequest() = HttpRequest();
         _poll_fds[i].events &= ~POLLOUT;
         _poll_fds[i].events |=  POLLIN;
@@ -300,8 +293,6 @@ void Manager::responseToClient(size_t& i)
     else
         cleanupClient(client_fd, i); 
 }
-
-// void Manager::processClientRequest(size_t& i, std::string temp_buffer, ssize_t message_size)
 
 
 void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message_size)
@@ -343,8 +334,6 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
     }
     else if (parseRes == PARSE_DONE)
     {
-        // std::cout << "!!!!!!!!!!!Content type: " << request.contentType << "\n";
-        // std::cout << "PARSE_DONE" << "\n";
         client->resetBytesReceived();
         size_t listen_index = _clientFdToListenerIndex[client_fd];
         Listener& listener = _listeners[listen_index];
@@ -352,9 +341,6 @@ void Manager::processClientRequest(size_t& i, char* temp_buffer, ssize_t message
         {
             Server* server = findServerForRequests(listener, request);
             size_t maxBodySize = server->getConfig().clientMaxBodySize;
-            // std::cout << "DEBUG: Request content length: " << request.contentLength ;
-            // std::cout << "DEBUG: Server max body size: "
-            //           << ", max body size: " << maxBodySize << "\n";
             if (maxBodySize > 0 && request.contentLength > maxBodySize)
             {
                 HttpResponse response;
@@ -476,12 +462,6 @@ void Manager::receiveDataFromClient(size_t& i)
     }
     else if (message_size < 0)
     {
-        // if (errno == EAGAIN || errno == EWOULDBLOCK)
-        // {
-        //     // No data available right now, continue
-        //     return;
-        // }
-        // std::cerr << "recv error on fd " << client_fd << ": " << strerror(errno) << "\n";
         cleanupClient(client_fd, i);
         return;
     }
@@ -513,7 +493,6 @@ int Manager::run()
     initializePollFds();
     while (true)
     {
-        // std::cerr << "we started.\n";
         int ready_fds = poll(_poll_fds.data(), _poll_fds.size(), -1);
         if (ready_fds < 0)
         {

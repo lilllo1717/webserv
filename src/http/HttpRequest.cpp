@@ -63,19 +63,15 @@ static BodyType establishBodyType(HttpRequest& request)
         auto res = std::from_chars(num_str.data(), num_str.data() + num_str.size(), res_value);
         if (res.ec != std::errc() || res.ptr !=  num_str.data() + num_str.size() || res_value < 0)
         {
-            // std::cout << "error here" << "\n";
             return UNSUPPORTED;
         }
         request.contentLength = res_value;
-        // std::cout << "Content-Length: " << request.headers["content-length"] << "\n";
         request.parseState = BODY;
         request.bodyType = CONTENT_LENGTH;
         return CONTENT_LENGTH;
     }
     return NONE;
 }
-
-// if (parseRes == PARSE_ERROR || parseRes == PARSE_IN_PROGRESS
 
 
 ParseResult HttpRequestParser::parse(HttpRequest& request)
@@ -97,14 +93,11 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
                 std::cout << "waiting for more data" << "\n";
                 return parseRes;
             }
-            // if (parseRes != PARSE_DONE)
-            //     return parseRes;
             request.parseState = HEADERS;
             continue;
         }
         else if (request.parseState == HEADERS)
         {
-            // std::cout << "entered headers parsing" << "\n";
             ParseResult parseRes = parseHeader(request);
             if (parseRes == PARSE_ERROR)
             {
@@ -116,12 +109,9 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
             {
                 return parseRes;
             }
-            // std::cout << "parsed header" << "\n";
             BodyType typeRes = establishBodyType(request);
-            // std::cout << "BodyType: " << typeRes << "\n";
             if (typeRes == NONE)
             {
-                // std::cout << "Body in NONE, parsing is done" << "\n";
                 request.parseResult = PARSE_DONE;
                 return PARSE_DONE;
             }
@@ -137,7 +127,6 @@ ParseResult HttpRequestParser::parse(HttpRequest& request)
         else if (request.parseState == BODY)
         {
 
-            // std::cout << "entered body parsing" << "\n";
             ParseResult parseRes = parseBody(request);
             if (parseRes == PARSE_ERROR)
             {

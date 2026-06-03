@@ -135,24 +135,17 @@ void printRouteInfo(const routeConfig& route)
 
 RouterResult Router::handleRequest(HttpRequest& request, const Listener& listener, const std::string& remoteAddr)
 {
-    // (void)listener;
     RouterResult routerResult;
     RequestMatchResult matchResult;
     HttpResponse response;
     if (request.host.empty())
     {
-        // std::cout << "no host name"  << "\n";
         routerResult.decision = DES_ERROR;
         routerResult.response.statusCode = static_cast<HTTP_StatusCode>(400);
         return routerResult;
     }
     const Server* selectedServer = listener.defaultServer;
     selectedServer = findServerForRequest(listener, request);
-    if (selectedServer)
-    {
-        std::cout << "Routing to server with port "
-                << selectedServer->getListenPort() << "\n";
-    }
     const routeConfig* bestMatchRouteConfig = NULL;
     serverConfig selectedServerConfig = selectedServer->getConfig();
 
@@ -170,14 +163,13 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
     }
     if (bestMatchRouteConfig == NULL)
     {
-        // std::cout << "error ar matching uri "  "\n";
+
         routerResult.decision = DES_ERROR;
         routerResult.response.statusCode = static_cast<HTTP_StatusCode>(404);
         return routerResult;
     }
     printRouteInfo(*bestMatchRouteConfig);
     std::string methodStringed = methodToString(request.method);
-    std::cout << "methodStringed: " << methodStringed << "\n";
     if (bestMatchRouteConfig->isRedirect == true)
     {
         routerResult.decision = DES_REDIRECT;
@@ -214,18 +206,15 @@ RouterResult Router::handleRequest(HttpRequest& request, const Listener& listene
     {
         std::string filePath = bestMatchRouteConfig->rootDir
                             + request.uri_path.substr(bestMatchRouteConfig->path.size());
-        std::cout << "DEBUG stat check: [" << filePath << "]\n";
         struct stat st;
         if (stat(filePath.c_str(), &st) == 0 && !S_ISDIR(st.st_mode) && (st.st_mode & S_IXUSR))
         {
-            std::cout << "DEBUG file is executable → DES_CGI\n";
             matchResult.interpreter = "";
             routerResult.decision = DES_CGI;
             routerResult.matchResult = matchResult;
             routerResult.routeConfigure = bestMatchRouteConfig;
             return routerResult;
         }
-        std::cout << "DEBUG stat failed or not executable\n";
     }
     routerResult.decision = DES_NORMAL;
     routerResult.matchResult = matchResult;

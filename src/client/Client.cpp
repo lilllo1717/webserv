@@ -93,35 +93,6 @@ size_t Client::getBytesSent() const
     return _bytesSent;
 }
 
-// void Client::parseHttpRequest()
-// {
-//     while (true)
-//     {
-//         if (_httpRequest.parseState == REQ_LINE)
-//         {
-//             auto pos = _httpRequest.buffer.find("\r\n");
-//             if (pos == std::string::npos)
-//             {
-//                 _httpRequest.parseResult = PARSE_IN_PROGRESS;
-//                 break;
-//             }
-//             std::string requestLine = _httpRequest.buffer.substr(0, pos);
-
-//             //parse line
-//             //erase in buffer
-//             //change state
-
-//         }
-//         else if (_httpRequest.parseState == HEADERS)
-//         {
-
-//         }
-//         else if (_httpRequest.parseState == BODY)
-//         {
-
-//         }
-//     }
-// }
 
 void Client::addBytesReceived(ssize_t bytes)
 {
@@ -139,15 +110,6 @@ size_t Client::getBytesReceived() const
     return _bytesReceived;
 }
 
-// void Client::appendToReceiveBuffer(const std::string& data)
-// {
-//     _receiveBuffer += data;
-//     _bytesReceived += data.size();
-// }
-// const std::string& Client::getReceiveBuffer() const
-// {
-//     return _receiveBuffer;
-// }
 
 void Client::appendToSendBuffer(const std::string& data)
 {

@@ -116,10 +116,6 @@ static ParseResult parseChunkedBody(HttpRequest& request)
     {
         if (request.chunkState == CHUNK_DONE)
         {
-            std::cout << "Decoded body: [";
-            for (size_t i = 0; i < request.body.size(); ++i)
-                std::cout << static_cast<char>(request.body[i]);
-            std::cout << "]\n";
             return PARSE_DONE;
         }
         if (request.buffer.empty())
@@ -156,25 +152,15 @@ static ParseResult parseLengthBody(HttpRequest& request)
     size_t body_len = request.contentLength;
     if (request.buffer.size() < body_len)
     {
-        std::cout << "error here" << "\n";
         return PARSE_IN_PROGRESS;
     }
     request.body.assign(request.buffer.begin(), request.buffer.begin() + body_len);
     request.buffer.erase(0, body_len);
-    std::cout << "request.body: [";
-    for (size_t i = 0; i < request.body.size(); i++)
-    {
-        std::cout << static_cast<char>(request.body[i]);
-    }
-    std::cout << "]\n";
     return PARSE_DONE;
 }
 
 ParseResult HttpRequestParser::parseBody(HttpRequest& request)
 {
-    std::cout << "ParseBody func entered." << "\n";
-    std::cout << "request.bodyType: " << request.bodyType << "\n";
-
     if (request.bodyType == CONTENT_LENGTH)
     {
         // std::cout << "body type condition." << "\n";
@@ -191,7 +177,6 @@ ParseResult HttpRequestParser::parseBody(HttpRequest& request)
     }
     else if (request.bodyType == CHUNKED)
     {
-        std::cout << "ParseBody chunked." << "\n";
         ParseResult res = parseChunkedBody(request);
         if (res == PARSE_DONE)
         {
@@ -200,7 +185,6 @@ ParseResult HttpRequestParser::parseBody(HttpRequest& request)
         }
         if (res == PARSE_ERROR)
         {
-            std::cout << "ParseBody chunked error" << "\n";
             return PARSE_ERROR;
         }
         return PARSE_IN_PROGRESS;

@@ -250,6 +250,13 @@ bool CgiHandler::createPipes()
 bool CgiHandler::executeChild()
 {
     std::cout << "executing child" << "\n";
+
+    std::string scriptDir = _scriptPath.substr(0, _scriptPath.rfind('/'));
+    if (!scriptDir.empty() && chdir(scriptDir.c_str()) != 0)
+    {
+        std::cerr << "chdir failed: " << strerror(errno) << "\n";
+        exit(1);
+    }
     close(_stdInPipe[1]);
     close(_stdOutPipe[0]);
     if (dup2(_stdInPipe[0], STDIN_FILENO) == -1)
